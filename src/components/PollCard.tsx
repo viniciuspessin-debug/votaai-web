@@ -123,7 +123,7 @@ export default function PollCard({ poll, onVote, userVote }: {
           </span>
           <button
             onClick={() => {
-              const text = `${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote no VotaAí!`;
+              const text = `${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote no VotaAí! 🗳️\nhttps://votaai.app`;
               if (navigator.share) navigator.share({ text });
               else navigator.clipboard.writeText(text);
             }}
