@@ -50,7 +50,12 @@ export default function Home() {
   useEffect(() => {
     seedPolls().catch(() => null);
     const unsub = subscribeToPolls((p) => {
-      setPolls(p);
+      const sorted = [...p].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return 0;
+      });
+      setPolls(sorted);
       setLoading(false);
     });
     return unsub;
