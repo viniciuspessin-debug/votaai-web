@@ -54,7 +54,7 @@ export default function Home() {
       const sorted = [...p].sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
-        return 0;
+        return (a.order ?? 999) - (b.order ?? 999);
       });
       setPolls(sorted);
       setLoading(false);
