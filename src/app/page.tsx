@@ -46,8 +46,9 @@ export default function Home() {
       .catch(() => null);
   }, []);
 
-  // Polls
+  // Polls — wait for auth before subscribing
   useEffect(() => {
+    if (!user) return;
     seedPolls().catch(() => null);
     const unsub = subscribeToPolls((p) => {
       const sorted = [...p].sort((a, b) => {
@@ -59,7 +60,7 @@ export default function Home() {
       setLoading(false);
     });
     return unsub;
-  }, []);
+  }, [user]);
 
   // User votes
   useEffect(() => {
