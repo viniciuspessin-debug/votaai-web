@@ -19,7 +19,7 @@ export async function signInWithGoogle() {
 }
 
 export function subscribeToPolls(callback: (polls: any[]) => void) {
-  const q = query(collection(db, 'polls'), orderBy('createdAt', 'desc'));
+  const q = query(collection(db, 'polls'));
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
   });
