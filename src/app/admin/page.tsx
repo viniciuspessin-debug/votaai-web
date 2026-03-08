@@ -122,20 +122,7 @@ export default function AdminPage() {
     </div>
   );
 
-  if (!user || user.email !== ADMIN_EMAIL) return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#07070E' }}>
-      <div className="text-center max-w-sm">
-        <div className="text-6xl mb-6">🔒</div>
-        <h1 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>ACESSO RESTRITO</h1>
-        <p className="text-sm mb-8" style={{ color: 'rgba(255,255,255,0.4)' }}>Essa página é exclusiva para administradores.</p>
-        {user && user.email !== ADMIN_EMAIL && (
-          <p className="text-xs mb-4 px-4 py-2 rounded-xl" style={{ background: 'rgba(255,82,82,0.15)', color: '#FF5252' }}>Logado como {user.email} — sem permissão</p>
-        )}
-        <button onClick={signInWithGoogle} className="px-6 py-3 rounded-xl font-black text-white text-sm" style={{ background: '#6C63FF' }}>🔗 Entrar com Google</button>
-        <a href="/" className="block mt-4 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>← Voltar ao site</a>
-      </div>
-    </div>
-  );
+  const isAdmin = user && user.email === ADMIN_EMAIL;
 
   const filtered = polls
     .filter(p => p.question?.toLowerCase().includes(search.toLowerCase()) ||
@@ -159,10 +146,24 @@ export default function AdminPage() {
           <span style={{ color: 'rgba(255,255,255,0.15)' }}>/</span>
           <h1 className="text-lg font-black text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>ADMIN</h1>
         </div>
-        <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}>✅ {user.email}</span>
+        <span className="text-xs px-3 py-1 rounded-full" style={{ background: 'rgba(0,201,167,0.15)', color: '#00C9A7' }}>✅ {user?.email}</span>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6">
+      {!isAdmin && (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="text-center max-w-sm">
+            <div className="text-6xl mb-6">🔒</div>
+            <h1 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>ACESSO RESTRITO</h1>
+            <p className="text-sm mb-8" style={{ color: 'rgba(255,255,255,0.4)' }}>Essa página é exclusiva para administradores.</p>
+            {user && user.email !== ADMIN_EMAIL && (
+              <p className="text-xs mb-4 px-4 py-2 rounded-xl" style={{ background: 'rgba(255,82,82,0.15)', color: '#FF5252' }}>Logado como {user.email} — sem permissão</p>
+            )}
+            <button onClick={signInWithGoogle} className="px-6 py-3 rounded-xl font-black text-white text-sm" style={{ background: '#6C63FF' }}>🔗 Entrar com Google</button>
+            <a href="/" className="block mt-4 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>← Voltar ao site</a>
+          </div>
+        </div>
+      )}
+      {isAdmin && <div className="max-w-4xl mx-auto p-6">
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
             { label: 'Enquetes', value: polls.length, emoji: '📋', color: '#6C63FF' },
@@ -338,6 +339,6 @@ export default function AdminPage() {
           </div>
         )}
       </div>
-    </div>
+    </div>}
   );
 }

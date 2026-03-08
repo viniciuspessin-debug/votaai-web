@@ -219,7 +219,7 @@ export default function Home() {
                   <button
                     key={tag}
                     onClick={() => setActiveTag(tag === 'todos' ? null : tag)}
-                    className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all capitalize" style={{ wordBreak: 'break-word' }}
+                    className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all capitalize"
                     style={{
                       borderColor: (activeTag === tag || (tag === 'todos' && !activeTag)) ? '#6C63FF' : 'rgba(255,255,255,0.1)',
                       background: (activeTag === tag || (tag === 'todos' && !activeTag)) ? 'rgba(108,99,255,0.2)' : 'transparent',
