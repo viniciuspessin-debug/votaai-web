@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PollCard from '@/components/PollCard';
 import CreatePollModal from '@/components/CreatePollModal';
 import CityMap from '@/components/CityMap';
@@ -29,6 +29,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const hasVotedRef = useRef(false);
 
   // Auth
   useEffect(() => {
@@ -88,7 +89,8 @@ export default function Home() {
     else if (ns === 10) showNotif('👑 10 votos! Rei das enquetes!');
     await castVote(id, choice, user.uid, city || undefined);
     // Show WhatsApp modal after first vote if not subscribed
-    if (Object.keys(votes).length === 0) {
+    if (!hasVotedRef.current) {
+      hasVotedRef.current = true;
       const sub = await getDoc(doc(db, 'subscribers', user.uid));
       if (!sub.exists()) setTimeout(() => setShowWhatsApp(true), 1500);
     }
