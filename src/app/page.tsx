@@ -244,7 +244,7 @@ export default function Home() {
               ) : (
                 filteredPolls.map((poll, i) => (
                   <div key={poll.id} style={{ animationDelay: `${i * 0.05}s` }} className="animate-fade-up">
-                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={Object.keys(votes).length === 1 && !!votes[poll.id]} />
+                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} />
                     {votes[poll.id] && (
                       <button
                         onClick={() => setShowCity(showCity === poll.id ? null : poll.id)}
