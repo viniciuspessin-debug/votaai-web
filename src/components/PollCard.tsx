@@ -1,5 +1,7 @@
 'use client';
 import { useState } from 'react';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 function fmt(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -7,16 +9,43 @@ function fmt(n: number) {
   return String(n);
 }
 
-export default function PollCard({ poll, onVote, userVote }: {
+export default function PollCard({ poll, onVote, userVote, userId, isFirstVote }: {
   poll: any;
   onVote: (id: string, choice: string) => void;
   userVote?: string;
+  userId?: string;
+  isFirstVote?: boolean;
 }) {
   const [hovering, setHovering] = useState<string | null>(null);
+  const [phone, setPhone] = useState('');
+  const [phoneSaved, setPhoneSaved] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
+
   const voted = !!userVote;
   const total = (poll.votesA || 0) + (poll.votesB || 0);
   const pctA = total > 0 ? Math.round((poll.votesA / total) * 100) : 50;
   const pctB = 100 - pctA;
+
+  const formatPhone = (v: string) => {
+    const digits = v.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+  };
+
+  const handleSavePhone = async () => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10 || !userId) return;
+    setSavingPhone(true);
+    await setDoc(doc(db, 'subscribers', userId), {
+      phone: digits,
+      userId,
+      subscribedAt: serverTimestamp(),
+      active: true,
+    });
+    setPhoneSaved(true);
+    setSavingPhone(false);
+  };
 
   const options = [
     { key: 'A', data: poll.optionA, pct: pctA, votes: poll.votesA || 0 },
@@ -29,7 +58,6 @@ export default function PollCard({ poll, onVote, userVote }: {
       style={{
         background: 'rgba(255,255,255,0.03)',
         borderColor: voted ? poll.color + '33' : 'rgba(255,255,255,0.07)',
-        animationFillMode: 'both',
       }}
     >
       {/* Polêmica do Dia banner */}
@@ -91,7 +119,6 @@ export default function PollCard({ poll, onVote, userVote }: {
                 cursor: voted ? 'default' : 'pointer',
               }}
             >
-              {/* Progress bar */}
               {voted && (
                 <div
                   className="absolute inset-y-0 left-0 transition-all duration-700"
@@ -101,16 +128,13 @@ export default function PollCard({ poll, onVote, userVote }: {
                   }}
                 />
               )}
-
               <span className="relative text-3xl">{data.emoji}</span>
-
               <div className="relative flex-1 min-w-0">
                 <div className="font-bold text-white text-sm truncate">{data.label}</div>
                 {data.sublabel && (
                   <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{data.sublabel}</div>
                 )}
               </div>
-
               {voted ? (
                 <div className="relative text-right shrink-0">
                   <div className="text-xl font-black" style={{ color: isUserVote ? poll.color : 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>
@@ -131,23 +155,63 @@ export default function PollCard({ poll, onVote, userVote }: {
         })}
       </div>
 
-      {/* Share footer */}
+      {/* Footer após votar */}
       {voted && (
-        <div className="mt-4 pt-4 flex items-center justify-between border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-            {userVote === 'A' ? poll.optionA.emoji : poll.optionB.emoji} Você votou em {userVote === 'A' ? poll.optionA.label : poll.optionB.label}
-          </span>
-          <button
-            onClick={() => {
-              const text = `${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote no VotaAí! 🗳️\nhttps://votaai.app`;
-              if (navigator.share) navigator.share({ text });
-              else navigator.clipboard.writeText(text);
-            }}
-            className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
-            style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
-          >
-            📤 Compartilhar
-          </button>
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+
+          {/* WhatsApp capture — só no primeiro voto */}
+          {isFirstVote && !phoneSaved && (
+            <div className="mb-3 p-3 rounded-xl" style={{ background: 'rgba(37,211,102,0.07)', border: '1px solid #25D36622' }}>
+              <p className="text-xs font-black mb-2" style={{ color: '#25D366' }}>🔥 Receba a Polêmica do Dia no WhatsApp</p>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>+55</span>
+                  <input
+                    className="w-full rounded-lg pl-9 pr-3 py-2 text-xs text-white outline-none border"
+                    style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}
+                    placeholder="(11) 99999-9999"
+                    value={phone}
+                    onChange={e => setPhone(formatPhone(e.target.value))}
+                    inputMode="numeric"
+                  />
+                </div>
+                <button
+                  onClick={handleSavePhone}
+                  disabled={phone.replace(/\D/g,'').length < 10 || savingPhone}
+                  className="px-3 py-2 rounded-lg text-xs font-black shrink-0"
+                  style={{
+                    background: phone.replace(/\D/g,'').length >= 10 ? '#25D366' : 'rgba(255,255,255,0.07)',
+                    color: phone.replace(/\D/g,'').length >= 10 ? 'white' : 'rgba(255,255,255,0.3)',
+                  }}
+                >
+                  {savingPhone ? '...' : 'Quero!'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {phoneSaved && (
+            <div className="mb-3 p-3 rounded-xl text-center" style={{ background: 'rgba(37,211,102,0.07)', border: '1px solid #25D36622' }}>
+              <p className="text-xs font-black" style={{ color: '#25D366' }}>✅ Cadastrado! Você vai receber a Polêmica do Dia 🔥</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+              {userVote === 'A' ? poll.optionA.emoji : poll.optionB.emoji} Você votou em {userVote === 'A' ? poll.optionA.label : poll.optionB.label}
+            </span>
+            <button
+              onClick={() => {
+                const text = `${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote no VotaAí! 🗳️\nhttps://votaai.app`;
+                if (navigator.share) navigator.share({ text });
+                else navigator.clipboard.writeText(text);
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+              style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+            >
+              📤 Compartilhar
+            </button>
+          </div>
         </div>
       )}
     </div>
