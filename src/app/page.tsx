@@ -123,7 +123,7 @@ export default function Home() {
       )}
 
       {/* Desktop layout */}
-      <div className="max-w-6xl mx-auto flex min-h-screen">
+      <div className="max-w-6xl mx-auto flex min-h-screen" style={{ overflow: 'hidden' }}>
 
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col w-64 p-6 sticky top-0 h-screen border-r" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
@@ -178,7 +178,7 @@ export default function Home() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 max-w-xl mx-auto px-4 py-6 pb-24 md:pb-6 min-w-0 overflow-hidden">
+        <main className="flex-1 max-w-xl mx-auto px-4 py-6 pb-24 md:pb-6" style={{ minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
 
           {/* Mobile header */}
           <div className="flex items-center justify-between mb-6 md:hidden">
