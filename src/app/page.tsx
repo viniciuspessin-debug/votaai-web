@@ -7,7 +7,7 @@ import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensure
 import { auth, db } from '@/lib/firebase';
 import WhatsAppModal from '@/components/WhatsAppModal';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 
 function fmt(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -244,7 +244,7 @@ export default function Home() {
               ) : (
                 filteredPolls.map((poll, i) => (
                   <div key={poll.id} style={{ animationDelay: `${i * 0.05}s` }} className="animate-fade-up">
-                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} />
+                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={Object.keys(votes).length === 1 && !!votes[poll.id]} />
                     {votes[poll.id] && (
                       <button
                         onClick={() => setShowCity(showCity === poll.id ? null : poll.id)}
@@ -332,6 +332,14 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+
+              <button
+                onClick={() => signOut(auth)}
+                className="w-full py-3 rounded-xl text-sm font-bold border mb-6 transition-all hover:bg-white/5"
+                style={{ borderColor: 'rgba(255,82,82,0.3)', color: '#FF5252' }}
+              >
+                🚪 Sair da conta
+              </button>
 
               {votedCount > 0 && (
                 <>
