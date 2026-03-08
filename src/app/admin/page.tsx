@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<string[]>(DEFAULT_TAGS);
   const [newCat, setNewCat] = useState('');
   const [savingCat, setSavingCat] = useState(false);
+  const [subscribers, setSubscribers] = useState<any[]>([]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); });
@@ -32,7 +33,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (user?.email === ADMIN_EMAIL) { fetchPolls(); fetchCategories(); }
+    if (user?.email === ADMIN_EMAIL) { fetchPolls(); fetchCategories(); fetchSubscribers(); }
   }, [user]);
 
   const fetchPolls = async () => {
@@ -40,6 +41,11 @@ export default function AdminPage() {
     const snap = await getDocs(q);
     const data = snap.docs.map((d, i) => ({ id: d.id, ...d.data(), _order: (d.data() as any).order ?? i }));
     setPolls(data.sort((a, b) => a._order - b._order));
+  };
+
+  const fetchSubscribers = async () => {
+    const snap = await getDocs(collection(db, 'subscribers'));
+    setSubscribers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((s: any) => s.active));
   };
 
   const fetchCategories = async () => {
@@ -172,7 +178,7 @@ export default function AdminPage() {
         </div>
 
         <div className="flex gap-2 mb-6">
-          {[{ id: 'polls', label: '📋 Enquetes' }, { id: 'categories', label: '🏷️ Categorias' }].map(t => (
+          {[{ id: 'polls', label: '📋 Enquetes' }, { id: 'categories', label: '🏷️ Categorias' }, { id: 'whatsapp', label: '💬 WhatsApp' }].map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id as any)} className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeTab === t.id ? '#6C63FF' : 'rgba(255,255,255,0.05)', color: activeTab === t.id ? 'white' : 'rgba(255,255,255,0.4)' }}>
               {t.label}
             </button>
@@ -243,6 +249,54 @@ export default function AdminPage() {
               {filtered.length === 0 && <div className="text-center py-16" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhuma enquete encontrada</div>}
             </div>
           </>
+        )}
+
+        {activeTab === 'whatsapp' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-white font-black text-lg">{subscribers.length} inscritos</p>
+                <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Recebem a Polêmica do Dia no WhatsApp</p>
+              </div>
+              <button onClick={fetchSubscribers} className="px-4 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.03)' }}>🔄</button>
+            </div>
+            {/* Dispatch button */}
+            {(() => {
+              const hotPoll = polls.find(p => p.hotOfDay);
+              if (!hotPoll) return (
+                <div className="p-4 rounded-xl mb-6 text-sm text-center" style={{ background: 'rgba(255,82,82,0.1)', color: '#FF5252', border: '1px solid #FF525233' }}>
+                  ⚠️ Defina uma Polêmica do Dia antes de disparar
+                </div>
+              );
+              const msg = encodeURIComponent();
+              return (
+                <div className="p-4 rounded-xl mb-6 border" style={{ background: 'rgba(247,183,49,0.05)', borderColor: '#F7B73133' }}>
+                  <p className="text-xs font-bold tracking-widest mb-2" style={{ color: '#F7B731' }}>🔥 POLÊMICA DO DIA ATIVA</p>
+                  <p className="text-white font-bold text-sm mb-3">{hotPoll.question}</p>
+                  <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>Clique em cada número abaixo para abrir o WhatsApp e enviar a mensagem.</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {subscribers.map(s => (
+                      <a
+                        key={s.id}
+                        href={}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 rounded-xl border transition-all"
+                        style={{ background: 'rgba(37,211,102,0.05)', borderColor: '#25D36633' }}
+                      >
+                        <div>
+                          <p className="text-sm font-bold text-white">{s.name || 'Anônimo'}</p>
+                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>+55 {s.phone}</p>
+                        </div>
+                        <span className="text-lg">💬</span>
+                      </a>
+                    ))}
+                  </div>
+                  {subscribers.length === 0 && <p className="text-center text-sm py-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum inscrito ainda</p>}
+                </div>
+              );
+            })()}
+          </div>
         )}
 
         {activeTab === 'categories' && (

@@ -4,7 +4,9 @@ import PollCard from '@/components/PollCard';
 import CreatePollModal from '@/components/CreatePollModal';
 import CityMap from '@/components/CityMap';
 import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensureAuth, signInWithGoogle } from '@/lib/polls';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import WhatsAppModal from '@/components/WhatsAppModal';
+import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 function fmt(n: number) {
@@ -26,6 +28,7 @@ export default function Home() {
   const [city, setCity] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -84,6 +87,11 @@ export default function Home() {
     else if (ns === 5) showNotif('⚡ 5 votos! Vicia fácil hein?');
     else if (ns === 10) showNotif('👑 10 votos! Rei das enquetes!');
     await castVote(id, choice, user.uid, city || undefined);
+    // Show WhatsApp modal after first vote if not subscribed
+    if (Object.keys(votes).length === 0) {
+      const sub = await getDoc(doc(db, 'subscribers', user.uid));
+      if (!sub.exists()) setTimeout(() => setShowWhatsApp(true), 1500);
+    }
   }, [user, votes, streak, city]);
 
   const handleCreate = async (data: any) => {
