@@ -66,6 +66,17 @@ export default function AdminPage() {
     showToast(pinned ? '📌 Enquete desafixada' : '📌 Enquete fixada no topo!');
   };
 
+  const handleHotOfDay = async (id: string, current: boolean) => {
+    // Remove hotOfDay de todos primeiro
+    if (!current) {
+      const toRemove = polls.filter(p => p.hotOfDay && p.id !== id);
+      await Promise.all(toRemove.map(p => updateDoc(doc(db, 'polls', p.id), { hotOfDay: false })));
+    }
+    await updateDoc(doc(db, 'polls', id), { hotOfDay: !current });
+    setPolls(p => p.map(x => ({ ...x, hotOfDay: x.id === id ? !current : (current ? x.hotOfDay : false) })));
+    showToast(!current ? '🔥 Polêmica do Dia definida!' : '🔥 Selo removido');
+  };
+
   const handleMove = async (index: number, direction: 'up' | 'down') => {
     const newPolls = [...polls];
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
@@ -215,6 +226,9 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">
+                        <button onClick={() => handleHotOfDay(poll.id, !!poll.hotOfDay)} className="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all" style={{ borderColor: poll.hotOfDay ? '#FF4E8C44' : 'rgba(255,255,255,0.1)', color: poll.hotOfDay ? '#FF4E8C' : 'rgba(255,255,255,0.4)', background: poll.hotOfDay ? '#FF4E8C11' : 'transparent' }}>
+                          {poll.hotOfDay ? '🔥 Polêmica' : '🔥 Setar'}
+                        </button>
                         <button onClick={() => handlePin(poll.id, poll.pinned)} className="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all" style={{ borderColor: poll.pinned ? '#F7B73144' : 'rgba(255,255,255,0.1)', color: poll.pinned ? '#F7B731' : 'rgba(255,255,255,0.4)', background: poll.pinned ? '#F7B73111' : 'transparent' }}>
                           {poll.pinned ? '📌 Fixada' : '📌 Fixar'}
                         </button>
