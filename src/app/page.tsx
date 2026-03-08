@@ -123,7 +123,7 @@ export default function Home() {
       )}
 
       {/* Desktop layout */}
-      <div className="max-w-6xl mx-auto flex min-h-screen" style={{ overflow: 'hidden' }}>
+      <div className="max-w-6xl mx-auto flex min-h-screen" style={{ overflowX: 'hidden', width: '100%' }}>
 
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col w-64 p-6 sticky top-0 h-screen border-r" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
@@ -178,7 +178,7 @@ export default function Home() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 max-w-xl mx-auto px-4 py-6 pb-24 md:pb-6" style={{ minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
+        <main className="flex-1 px-4 py-6 pb-24 md:pb-6" style={{ minWidth: 0, width: '100%', maxWidth: 576, boxSizing: 'border-box', margin: '0 auto' }}>
 
           {/* Mobile header */}
           <div className="flex items-center justify-between mb-6 md:hidden">
@@ -206,12 +206,12 @@ export default function Home() {
                 />
               </div>
               {/* Category filters */}
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="mb-4" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%' }}>
                 {allTags.map(tag => (
                   <button
                     key={tag}
                     onClick={() => setActiveTag(tag === 'todos' ? null : tag)}
-                    className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all capitalize"
+                    className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all capitalize" style={{ wordBreak: 'break-word' }}
                     style={{
                       borderColor: (activeTag === tag || (tag === 'todos' && !activeTag)) ? '#6C63FF' : 'rgba(255,255,255,0.1)',
                       background: (activeTag === tag || (tag === 'todos' && !activeTag)) ? 'rgba(108,99,255,0.2)' : 'transparent',
