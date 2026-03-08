@@ -71,7 +71,10 @@ export default function Home() {
   // User votes
   useEffect(() => {
     if (!user) return;
-    getUserVotes(user.uid).then(setVotes);
+    getUserVotes(user.uid).then(v => {
+      setVotes(v);
+      if (Object.keys(v).length > 0) hasVotedRef.current = true;
+    });
   }, [user]);
 
   const showNotif = (msg: string) => {
