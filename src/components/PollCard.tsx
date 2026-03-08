@@ -32,6 +32,22 @@ export default function PollCard({ poll, onVote, userVote }: {
         animationFillMode: 'both',
       }}
     >
+      {/* Polêmica do Dia banner */}
+      {poll.hotOfDay && (
+        <div
+          className="flex items-center gap-2 px-4 py-2 rounded-xl mb-3 text-xs font-black tracking-widest"
+          style={{
+            background: 'linear-gradient(90deg, #FF4E8C22, #FF6B3522)',
+            border: '1px solid #FF4E8C44',
+          }}
+        >
+          <span className="text-base animate-pulse">🔥</span>
+          <span style={{ background: 'linear-gradient(90deg, #FF4E8C, #FF6B35)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            POLÊMICA DO DIA
+          </span>
+        </div>
+      )}
+
       {/* Tag */}
       <div className="flex items-center gap-2 mb-4">
         <div
