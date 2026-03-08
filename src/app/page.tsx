@@ -24,6 +24,8 @@ export default function Home() {
   const [notif, setNotif] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [city, setCity] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [activeTag, setActiveTag] = useState<string | null>(null);
 
   // Auth
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function Home() {
       const sorted = [...p].sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
-        return (a.order ?? 999) - (b.order ?? 999);
+        return 0;
       });
       setPolls(sorted);
       setLoading(false);
@@ -100,6 +102,14 @@ export default function Home() {
   };
 
   const trending = [...polls].sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0));
+  const allTags = ['todos', ...Array.from(new Set(polls.map(p => p.tag).filter(Boolean)))].slice(0, 12);
+  const filteredPolls = polls.filter(p => {
+    const matchesTag = !activeTag || activeTag === 'todos' || p.tag === activeTag;
+    const matchesSearch = !search || p.question?.toLowerCase().includes(search.toLowerCase()) ||
+      p.optionA?.label?.toLowerCase().includes(search.toLowerCase()) ||
+      p.optionB?.label?.toLowerCase().includes(search.toLowerCase());
+    return matchesTag && matchesSearch;
+  });
   const votedCount = Object.keys(votes).length;
   const isAnon = user?.isAnonymous;
 
@@ -185,6 +195,33 @@ export default function Home() {
           {/* FEED */}
           {tab === 'feed' && (
             <div>
+              {/* Search */}
+              <div className="mb-3">
+                <input
+                  className="w-full rounded-2xl px-4 py-3 text-sm text-white outline-none border transition-all"
+                  style={{ background: 'rgba(255,255,255,0.05)', borderColor: search ? '#6C63FF' : 'rgba(255,255,255,0.08)' }}
+                  placeholder="🔍 Buscar enquetes..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+              {/* Category filters */}
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setActiveTag(tag === 'todos' ? null : tag)}
+                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all capitalize"
+                    style={{
+                      borderColor: (activeTag === tag || (tag === 'todos' && !activeTag)) ? '#6C63FF' : 'rgba(255,255,255,0.1)',
+                      background: (activeTag === tag || (tag === 'todos' && !activeTag)) ? 'rgba(108,99,255,0.2)' : 'transparent',
+                      color: (activeTag === tag || (tag === 'todos' && !activeTag)) ? '#6C63FF' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
               {loading ? (
                 <div className="space-y-4">
                   {[1,2,3].map(i => (
@@ -192,7 +229,7 @@ export default function Home() {
                   ))}
                 </div>
               ) : (
-                polls.map((poll, i) => (
+                filteredPolls.map((poll, i) => (
                   <div key={poll.id} style={{ animationDelay: `${i * 0.05}s` }} className="animate-fade-up">
                     <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} />
                     {votes[poll.id] && (
@@ -213,8 +250,10 @@ export default function Home() {
                   </div>
                 ))
               )}
-              {!loading && polls.length === 0 && (
-                <div className="text-center py-20" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhuma enquete ainda. Crie a primeira! 🚀</div>
+              {!loading && filteredPolls.length === 0 && (
+                <div className="text-center py-20" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  {search || activeTag ? '🔍 Nenhuma enquete encontrada' : 'Nenhuma enquete ainda. Crie a primeira! 🚀'}
+                </div>
               )}
             </div>
           )}
