@@ -206,12 +206,12 @@ export default function Home() {
                 />
               </div>
               {/* Category filters */}
-              <div className="flex gap-2 pb-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', maxWidth: '100%' }}>
+              <div className="flex flex-wrap gap-2 mb-4">
                 {allTags.map(tag => (
                   <button
                     key={tag}
                     onClick={() => setActiveTag(tag === 'todos' ? null : tag)}
-                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all capitalize whitespace-nowrap"
+                    className="px-3 py-1.5 rounded-full text-xs font-bold border transition-all capitalize"
                     style={{
                       borderColor: (activeTag === tag || (tag === 'todos' && !activeTag)) ? '#6C63FF' : 'rgba(255,255,255,0.1)',
                       background: (activeTag === tag || (tag === 'todos' && !activeTag)) ? 'rgba(108,99,255,0.2)' : 'transparent',
