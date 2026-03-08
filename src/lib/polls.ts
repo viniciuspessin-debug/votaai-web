@@ -19,9 +19,11 @@ export async function signInWithGoogle() {
 }
 
 export function subscribeToPolls(callback: (polls: any[]) => void) {
-  const q = query(collection(db, 'polls'));
+  const q = query(collection(db, 'polls'), orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const polls = snap.docs.map((d, i) => ({ id: d.id, ...d.data(), _order: (d.data() as any).order ?? i }));
+    polls.sort((a, b) => a._order - b._order);
+    callback(polls);
   });
 }
 
@@ -44,10 +46,13 @@ export async function castVote(pollId: string, choice: string, userId: string, c
 }
 
 export async function createPoll({ question, optionA, optionB, tag, color, userId }: any) {
+  const snap = await getDocs(collection(db, 'polls'));
+  const lastOrder = snap.size;
   return addDoc(collection(db, 'polls'), {
     question, optionA, optionB, tag, color,
     votesA: 0, votesB: 0, totalVotes: 0,
     cities: {},
+    order: lastOrder,
     createdBy: userId,
     createdAt: serverTimestamp(),
   });
