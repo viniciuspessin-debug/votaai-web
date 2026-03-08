@@ -9,12 +9,13 @@ function fmt(n: number) {
   return String(n);
 }
 
-export default function PollCard({ poll, onVote, userVote, userId, isFirstVote }: {
+export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, onSubscribed }: {
   poll: any;
   onVote: (id: string, choice: string) => void;
   userVote?: string;
   userId?: string;
   isFirstVote?: boolean;
+  onSubscribed?: () => void;
 }) {
   const [hovering, setHovering] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
@@ -45,6 +46,7 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote }
     });
     setPhoneSaved(true);
     setSavingPhone(false);
+    if (onSubscribed) onSubscribed();
   };
 
   const options = [

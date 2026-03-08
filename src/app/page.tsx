@@ -30,6 +30,7 @@ export default function Home() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const hasVotedRef = useRef(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -68,13 +69,16 @@ export default function Home() {
     return unsub;
   }, [user]);
 
-  // User votes
+  // User votes + check subscription
   useEffect(() => {
     if (!user) return;
     getUserVotes(user.uid).then(v => {
       setVotes(v);
       if (Object.keys(v).length > 0) hasVotedRef.current = true;
     });
+    getDoc(doc(db, 'subscribers', user.uid)).then(snap => {
+      if (snap.exists()) setIsSubscribed(true);
+    }).catch(() => null);
   }, [user]);
 
   const showNotif = (msg: string) => {
@@ -244,16 +248,8 @@ export default function Home() {
               ) : (
                 filteredPolls.map((poll, i) => (
                   <div key={poll.id} style={{ animationDelay: `${i * 0.05}s` }} className="animate-fade-up">
-                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={Object.keys(votes).length === 1 && !!votes[poll.id]} />
-                    {votes[poll.id] && (
-                      <button
-                        onClick={() => setShowCity(showCity === poll.id ? null : poll.id)}
-                        className="w-full text-xs py-2 mb-4 -mt-2 rounded-b-xl border-x border-b transition-colors text-center"
-                        style={{ borderColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.02)' }}
-                      >
-                        🗺️ {showCity === poll.id ? 'Esconder' : 'Ver'} resultado por cidade
-                      </button>
-                    )}
+                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={!isSubscribed && !!votes[poll.id]} onSubscribed={() => setIsSubscribed(true)} />
+
                     {showCity === poll.id && (
                       <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
                         <p className="text-xs font-bold tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>RESULTADO POR CIDADE</p>
