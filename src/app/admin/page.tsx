@@ -279,7 +279,7 @@ export default function AdminPage() {
                   <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>Clique em cada contato para abrir o WhatsApp e enviar.</p>
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {subscribers.map(s => {
-                      const msg = encodeURIComponent(`🔥 *POLÊMICA DO DIA no VotaAí!*\n\n*${hotPoll.question}*\n\n${hotPoll.optionA?.emoji} ${hotPoll.optionA?.label} vs ${hotPoll.optionB?.emoji} ${hotPoll.optionB?.label}\n\n👉 Vote agora: https://votaai.app\n\n_Responda SAIR para cancelar_`);
+                      const msg = encodeURIComponent(`🔥 POLÊMICA DO DIA no VotaAí!\n${hotPoll.question}\nhttps://votaai.app\nResponda SAIR para cancelar`);
                       return (
                         <a key={s.id} href={`https://wa.me/55${s.phone}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-xl border transition-all" style={{ background: 'rgba(37,211,102,0.05)', borderColor: '#25D36633' }}>
                           <div>
