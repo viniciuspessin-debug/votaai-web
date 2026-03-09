@@ -47,14 +47,19 @@ function HomeCore() {
         setUser(u);
         // Save profile to Firestore if not anonymous
         if (!u.isAnonymous && u.email) {
-          setDoc(doc(db, 'members', u.uid), {
-            email: u.email,
-            displayName: u.displayName || null,
-            provider: u.providerData[0]?.providerId || 'password',
-            joinedAt: u.metadata.creationTime || null,
-            lastLogin: new Date().toISOString(),
-            uid: u.uid,
-          }, { merge: true }).catch(e => console.error('members write error:', e));
+          // Reload user to ensure providerData is fresh after linkWithCredential
+          u.reload().then(() => {
+            const fresh = auth.currentUser;
+            if (!fresh || fresh.isAnonymous || !fresh.email) return;
+            setDoc(doc(db, 'members', fresh.uid), {
+              email: fresh.email,
+              displayName: fresh.displayName || null,
+              provider: fresh.providerData[0]?.providerId || 'password',
+              joinedAt: fresh.metadata.creationTime || null,
+              lastLogin: new Date().toISOString(),
+              uid: fresh.uid,
+            }, { merge: true }).catch(e => console.error('members write error:', e));
+          });
         }
       }
     });

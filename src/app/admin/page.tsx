@@ -63,10 +63,7 @@ export default function AdminPage() {
 
   const fetchMembers = async () => {
     const snap = await getDocs(collection(db, 'members'));
-    const list = await Promise.all(snap.docs.map(async d => {
-      const votesSnap = await getDocs(collection(db, `users/${d.id}/votes`));
-      return { id: d.id, ...d.data(), voteCount: votesSnap.size };
-    }));
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     setMembers(list.sort((a: any, b: any) => new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime()));
   };
 

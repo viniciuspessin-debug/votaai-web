@@ -62,6 +62,9 @@ export async function castVote(pollId: string, choice: string, userId: string, c
   const update: any = { [field]: increment(1), totalVotes: increment(1) };
   if (cityField) update[cityField] = increment(1);
   await updateDoc(doc(db, 'polls', pollId), update);
+  // Increment voteCount on member profile (non-blocking)
+  const userDoc = doc(db, 'members', userId);
+  setDoc(userDoc, { voteCount: increment(1) }, { merge: true }).catch(() => null);
 }
 
 export async function createPoll({ question, optionA, optionB, tag, color, userId }: any) {
