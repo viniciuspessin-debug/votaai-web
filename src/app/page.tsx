@@ -7,7 +7,7 @@ import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensure
 import { auth, db } from '@/lib/firebase';
 import WhatsAppModal from '@/components/WhatsAppModal';
 import AuthModal from '@/components/AuthModal';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 
 function fmt(n: number) {
@@ -45,6 +45,17 @@ function HomeCore() {
         setUser(user);
       } else {
         setUser(u);
+        // Save profile to Firestore if not anonymous
+        if (!u.isAnonymous && u.email) {
+          setDoc(doc(db, 'members', u.uid), {
+            email: u.email,
+            displayName: u.displayName || null,
+            provider: u.providerData[0]?.providerId || 'email',
+            joinedAt: u.metadata.creationTime || null,
+            lastLogin: new Date().toISOString(),
+            uid: u.uid,
+          }, { merge: true }).catch(() => null);
+        }
       }
     });
     return unsub;

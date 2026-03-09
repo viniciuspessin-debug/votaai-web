@@ -26,6 +26,7 @@ export default function AdminPage() {
   const [newCat, setNewCat] = useState('');
   const [savingCat, setSavingCat] = useState(false);
   const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); });
@@ -37,6 +38,7 @@ export default function AdminPage() {
       fetchPolls();
       fetchCategories();
       fetchSubscribers();
+      fetchMembers();
     }
   }, [user]);
 
@@ -52,6 +54,16 @@ export default function AdminPage() {
       const snap = await getDoc(doc(db, 'config', 'categories'));
       if (snap.exists()) setCategories(snap.data().list || DEFAULT_TAGS);
     } catch { setCategories(DEFAULT_TAGS); }
+  };
+
+  const fetchMembers = async () => {
+    const snap = await getDocs(collection(db, 'members'));
+    const memberList = await Promise.all(snap.docs.map(async d => {
+      const data = d.data();
+      const votesSnap = await getDocs(collection(db, `users/${d.id}/votes`));
+      return { id: d.id, ...data, voteCount: votesSnap.size };
+    }));
+    setMembers(memberList.sort((a, b) => new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime()));
   };
 
   const fetchSubscribers = async () => {
@@ -168,7 +180,7 @@ export default function AdminPage() {
             {[
               { label: 'Enquetes', value: polls.length, emoji: '📋', color: '#6C63FF' },
               { label: 'Votos totais', value: fmt(totalVotes), emoji: '🗳️', color: '#00C9A7' },
-              { label: 'Inscritos ZAP', value: subscribers.length, emoji: '💬', color: '#25D366' },
+              { label: 'Membros', value: members.length, emoji: '👥', color: '#6C63FF' },
             ].map(s => (
               <div key={s.label} className="rounded-2xl p-5 border text-center" style={{ background: 'rgba(255,255,255,0.03)', borderColor: s.color + '33' }}>
                 <div className="text-2xl mb-2">{s.emoji}</div>
@@ -183,6 +195,7 @@ export default function AdminPage() {
               { id: 'polls', label: '📋 Enquetes' },
               { id: 'categories', label: '🏷️ Categorias' },
               { id: 'whatsapp', label: '💬 WhatsApp' },
+              { id: 'members', label: '👥 Membros' },
             ].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id as any)} className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeTab === t.id ? '#6C63FF' : 'rgba(255,255,255,0.05)', color: activeTab === t.id ? 'white' : 'rgba(255,255,255,0.4)' }}>
                 {t.label}
@@ -279,7 +292,7 @@ export default function AdminPage() {
                   <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>Clique em cada contato para abrir o WhatsApp e enviar.</p>
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {subscribers.map(s => {
-                      const msg = encodeURIComponent(`🔥 *POLÊMICA DO DIA no VotaAí!*\n\n*${hotPoll.question}*\n\n${hotPoll.optionA?.emoji} ${hotPoll.optionA?.label} vs ${hotPoll.optionB?.emoji} ${hotPoll.optionB?.label}\n\n👉 Vote agora: https://votaai.app\n\n_Responda SAIR para cancelar_`);
+                      const msg = encodeURIComponent(`🔥 POLÊMICA DO DIA no VotaAí!\n${hotPoll.question}\nhttps://votaai.app\nResponda SAIR para cancelar`);
                       return (
                         <a key={s.id} href={`https://wa.me/55${s.phone}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-xl border transition-all" style={{ background: 'rgba(37,211,102,0.05)', borderColor: '#25D36633' }}>
                           <div>
@@ -294,6 +307,55 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* MEMBERS TAB */}
+          {activeTab === 'members' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-white font-black text-lg">{members.length} membros</p>
+                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Usuários com conta cadastrada</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={fetchMembers} className="px-4 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.03)' }}>🔄</button>
+                  <button
+                    onClick={() => {
+                      const csv = ['Email,Data de cadastro,Votos,Provedor', ...members.map(m => `${m.email},${m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('pt-BR') : '-'},${m.voteCount},${m.provider === 'google.com' ? 'Google' : 'Email'}`)].join('
+');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url; a.download = 'membros-votaai.csv'; a.click();
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-bold border"
+                    style={{ borderColor: '#00C9A733', color: '#00C9A7', background: 'rgba(0,201,167,0.07)' }}
+                  >
+                    📥 Exportar CSV
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {members.map(m => (
+                  <div key={m.id} className="flex items-center gap-4 p-4 rounded-xl border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0" style={{ background: m.provider === 'google.com' ? '#4285F422' : '#6C63FF22', color: m.provider === 'google.com' ? '#4285F4' : '#6C63FF' }}>
+                      {(m.email || '?')[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white truncate">{m.email}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        {m.provider === 'google.com' ? '🔵 Google' : '📧 Email'} · {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('pt-BR') : '-'}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-black" style={{ color: '#6C63FF' }}>{m.voteCount}</p>
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>votos</p>
+                    </div>
+                  </div>
+                ))}
+                {members.length === 0 && <p className="text-center py-16 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum membro ainda</p>}
+              </div>
             </div>
           )}
 
