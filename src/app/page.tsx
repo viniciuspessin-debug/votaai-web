@@ -6,6 +6,7 @@ import CityMap from '@/components/CityMap';
 import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensureAuth, signInWithGoogle } from '@/lib/polls';
 import { auth, db } from '@/lib/firebase';
 import WhatsAppModal from '@/components/WhatsAppModal';
+import AuthModal from '@/components/AuthModal';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 
@@ -30,6 +31,7 @@ function HomeCore() {
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const pollRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasVotedRef = useRef(false);
@@ -220,6 +222,13 @@ function HomeCore() {
           </div>
           <div className="flex gap-2 items-center">
             {streak >= 3 && <span className="text-sm font-bold px-3 py-1 rounded-full" style={{ background: '#FF6B3520', color: '#FF6B35' }}>🔥{streak}</span>}
+            {isAnon ? (
+              <button onClick={() => setShowAuth(true)} className="px-3 py-2 rounded-xl text-xs font-black border" style={{ borderColor: '#6C63FF66', color: '#6C63FF' }}>Entrar</button>
+            ) : (
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black" style={{ background: '#6C63FF22', color: '#6C63FF', border: '1px solid #6C63FF44' }}>
+                {(user?.displayName || user?.email || '?')[0].toUpperCase()}
+              </div>
+            )}
             <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-xl text-sm font-black text-white" style={{ background: '#6C63FF' }}>+ Criar</button>
           </div>
         </header>
@@ -395,6 +404,9 @@ function HomeCore() {
         <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-xl text-sm font-black text-white ml-2" style={{ background: '#6C63FF' }}>+ Criar</button>
       </div>
 
+      {showAuth && (
+        <AuthModal onClose={() => setShowAuth(false)} anonUid={isAnon ? user?.uid : undefined} />
+      )}
       {showCreate && <CreatePollModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
     </div>
   );
