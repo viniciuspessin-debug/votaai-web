@@ -21,7 +21,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'order' | 'popular'>('order');
   const [toast, setToast] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'polls' | 'categories' | 'whatsapp'>('polls');
+  const [activeTab, setActiveTab] = useState<'polls' | 'categories' | 'whatsapp' | 'members'>('polls');
   const [categories, setCategories] = useState<string[]>(DEFAULT_TAGS);
   const [newCat, setNewCat] = useState('');
   const [savingCat, setSavingCat] = useState(false);
@@ -56,19 +56,18 @@ export default function AdminPage() {
     } catch { setCategories(DEFAULT_TAGS); }
   };
 
-  const fetchMembers = async () => {
-    const snap = await getDocs(collection(db, 'members'));
-    const memberList = await Promise.all(snap.docs.map(async d => {
-      const data = d.data();
-      const votesSnap = await getDocs(collection(db, `users/${d.id}/votes`));
-      return { id: d.id, ...data, voteCount: votesSnap.size };
-    }));
-    setMembers(memberList.sort((a, b) => new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime()));
-  };
-
   const fetchSubscribers = async () => {
     const snap = await getDocs(collection(db, 'subscribers'));
     setSubscribers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((s: any) => s.active));
+  };
+
+  const fetchMembers = async () => {
+    const snap = await getDocs(collection(db, 'members'));
+    const list = await Promise.all(snap.docs.map(async d => {
+      const votesSnap = await getDocs(collection(db, `users/${d.id}/votes`));
+      return { id: d.id, ...d.data(), voteCount: votesSnap.size };
+    }));
+    setMembers(list.sort((a: any, b: any) => new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime()));
   };
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
@@ -131,6 +130,18 @@ export default function AdminPage() {
     showToast(`🗑️ Categoria "${cat}" removida`);
   };
 
+  const exportMembersCSV = () => {
+    const csv = [
+      'Email,Data de cadastro,Votos,Provedor',
+      ...members.map((m: any) => `${m.email},${m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('pt-BR') : '-'},${m.voteCount},${m.provider === 'google.com' ? 'Google' : 'Email'}`)
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'membros-votaai.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#07070E' }}>
       <div className="text-white/40 text-sm">Carregando...</div>
@@ -176,26 +187,30 @@ export default function AdminPage() {
         </div>
       ) : (
         <div className="max-w-4xl mx-auto p-6">
-          <div className="grid grid-cols-3 gap-4 mb-6">
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
             {[
               { label: 'Enquetes', value: polls.length, emoji: '📋', color: '#6C63FF' },
               { label: 'Votos totais', value: fmt(totalVotes), emoji: '🗳️', color: '#00C9A7' },
-              { label: 'Membros', value: members.length, emoji: '👥', color: '#6C63FF' },
+              { label: 'Membros', value: members.length, emoji: '👥', color: '#FF4E8C' },
+              { label: 'Inscritos ZAP', value: subscribers.length, emoji: '💬', color: '#25D366' },
             ].map(s => (
-              <div key={s.label} className="rounded-2xl p-5 border text-center" style={{ background: 'rgba(255,255,255,0.03)', borderColor: s.color + '33' }}>
-                <div className="text-2xl mb-2">{s.emoji}</div>
-                <div className="text-2xl font-black" style={{ color: s.color, fontFamily: 'var(--font-display)' }}>{s.value}</div>
-                <div className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{s.label}</div>
+              <div key={s.label} className="rounded-2xl p-4 border text-center" style={{ background: 'rgba(255,255,255,0.03)', borderColor: s.color + '33' }}>
+                <div className="text-xl mb-1">{s.emoji}</div>
+                <div className="text-xl font-black" style={{ color: s.color, fontFamily: 'var(--font-display)' }}>{s.value}</div>
+                <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{s.label}</div>
               </div>
             ))}
           </div>
 
-          <div className="flex gap-2 mb-6">
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6 flex-wrap">
             {[
               { id: 'polls', label: '📋 Enquetes' },
-              { id: 'categories', label: '🏷️ Categorias' },
-              { id: 'whatsapp', label: '💬 WhatsApp' },
               { id: 'members', label: '👥 Membros' },
+              { id: 'whatsapp', label: '💬 WhatsApp' },
+              { id: 'categories', label: '🏷️ Categorias' },
             ].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id as any)} className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeTab === t.id ? '#6C63FF' : 'rgba(255,255,255,0.05)', color: activeTab === t.id ? 'white' : 'rgba(255,255,255,0.4)' }}>
                 {t.label}
@@ -270,46 +285,6 @@ export default function AdminPage() {
             </>
           )}
 
-          {/* WHATSAPP TAB */}
-          {activeTab === 'whatsapp' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <p className="text-white font-black text-lg">{subscribers.length} inscritos</p>
-                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Recebem a Polêmica do Dia no WhatsApp</p>
-                </div>
-                <button onClick={fetchSubscribers} className="px-4 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.03)' }}>🔄</button>
-              </div>
-
-              {!hotPoll ? (
-                <div className="p-4 rounded-xl mb-6 text-sm text-center" style={{ background: 'rgba(255,82,82,0.1)', color: '#FF5252', border: '1px solid #FF525233' }}>
-                  ⚠️ Defina uma Polêmica do Dia antes de disparar
-                </div>
-              ) : (
-                <div className="p-4 rounded-xl mb-6 border" style={{ background: 'rgba(247,183,49,0.05)', borderColor: '#F7B73133' }}>
-                  <p className="text-xs font-bold tracking-widest mb-2" style={{ color: '#F7B731' }}>🔥 POLÊMICA DO DIA ATIVA</p>
-                  <p className="text-white font-bold text-sm mb-1">{hotPoll.question}</p>
-                  <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>Clique em cada contato para abrir o WhatsApp e enviar.</p>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {subscribers.map(s => {
-                      const msg = encodeURIComponent(`🔥 POLÊMICA DO DIA no VotaAí!\n${hotPoll.question}\nhttps://votaai.app\nResponda SAIR para cancelar`);
-                      return (
-                        <a key={s.id} href={`https://wa.me/55${s.phone}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-xl border transition-all" style={{ background: 'rgba(37,211,102,0.05)', borderColor: '#25D36633' }}>
-                          <div>
-                            <p className="text-sm font-bold text-white">{s.name || 'Anônimo'}</p>
-                            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>+55 {s.phone}</p>
-                          </div>
-                          <span className="text-lg">💬</span>
-                        </a>
-                      );
-                    })}
-                    {subscribers.length === 0 && <p className="text-center text-sm py-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum inscrito ainda</p>}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* MEMBERS TAB */}
           {activeTab === 'members' && (
             <div>
@@ -320,24 +295,13 @@ export default function AdminPage() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={fetchMembers} className="px-4 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.03)' }}>🔄</button>
-                  <button
-                    onClick={() => {
-                      const csv = ['Email,Data de cadastro,Votos,Provedor', ...members.map(m => `${m.email},${m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('pt-BR') : '-'},${m.voteCount},${m.provider === 'google.com' ? 'Google' : 'Email'}`)].join('
-');
-                      const blob = new Blob([csv], { type: 'text/csv' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url; a.download = 'membros-votaai.csv'; a.click();
-                    }}
-                    className="px-4 py-2 rounded-xl text-sm font-bold border"
-                    style={{ borderColor: '#00C9A733', color: '#00C9A7', background: 'rgba(0,201,167,0.07)' }}
-                  >
+                  <button onClick={exportMembersCSV} className="px-4 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: '#00C9A733', color: '#00C9A7', background: 'rgba(0,201,167,0.07)' }}>
                     📥 Exportar CSV
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                {members.map(m => (
+                {members.map((m: any) => (
                   <div key={m.id} className="flex items-center gap-4 p-4 rounded-xl border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
                     <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0" style={{ background: m.provider === 'google.com' ? '#4285F422' : '#6C63FF22', color: m.provider === 'google.com' ? '#4285F4' : '#6C63FF' }}>
                       {(m.email || '?')[0].toUpperCase()}
@@ -356,6 +320,45 @@ export default function AdminPage() {
                 ))}
                 {members.length === 0 && <p className="text-center py-16 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum membro ainda</p>}
               </div>
+            </div>
+          )}
+
+          {/* WHATSAPP TAB */}
+          {activeTab === 'whatsapp' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-white font-black text-lg">{subscribers.length} inscritos</p>
+                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Recebem a Polêmica do Dia no WhatsApp</p>
+                </div>
+                <button onClick={fetchSubscribers} className="px-4 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.03)' }}>🔄</button>
+              </div>
+              {!hotPoll ? (
+                <div className="p-4 rounded-xl mb-6 text-sm text-center" style={{ background: 'rgba(255,82,82,0.1)', color: '#FF5252', border: '1px solid #FF525233' }}>
+                  ⚠️ Defina uma Polêmica do Dia antes de disparar
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl mb-6 border" style={{ background: 'rgba(247,183,49,0.05)', borderColor: '#F7B73133' }}>
+                  <p className="text-xs font-bold tracking-widest mb-2" style={{ color: '#F7B731' }}>🔥 POLÊMICA DO DIA ATIVA</p>
+                  <p className="text-white font-bold text-sm mb-1">{hotPoll.question}</p>
+                  <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>Clique em cada contato para abrir o WhatsApp e enviar.</p>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {subscribers.map((s: any) => {
+                      const msg = encodeURIComponent(`🔥 POLÊMICA DO DIA no VotaAí!\n${hotPoll.question}\nhttps://votaai.app\nResponda SAIR para cancelar`);
+                      return (
+                        <a key={s.id} href={`https://wa.me/55${s.phone}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-xl border transition-all" style={{ background: 'rgba(37,211,102,0.05)', borderColor: '#25D36633' }}>
+                          <div>
+                            <p className="text-sm font-bold text-white">{s.name || 'Anônimo'}</p>
+                            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>+55 {s.phone}</p>
+                          </div>
+                          <span className="text-lg">💬</span>
+                        </a>
+                      );
+                    })}
+                    {subscribers.length === 0 && <p className="text-center text-sm py-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum inscrito ainda</p>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
