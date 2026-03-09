@@ -45,12 +45,12 @@ function HomeCore() {
         setUser(user);
       } else {
         setUser(u);
-        // Save profile to Firestore if not anonymous
+        // Save profile to Firestore if not anonymous — always update on login
         if (!u.isAnonymous && u.email) {
-          // Reload user to ensure providerData is fresh after linkWithCredential
           u.reload().then(() => {
             const fresh = auth.currentUser;
             if (!fresh || fresh.isAnonymous || !fresh.email) return;
+            // Always write all fields with merge — fills gaps from castVote partial docs
             setDoc(doc(db, 'members', fresh.uid), {
               email: fresh.email,
               displayName: fresh.displayName || null,

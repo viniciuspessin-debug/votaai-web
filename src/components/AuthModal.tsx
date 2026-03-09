@@ -1,13 +1,42 @@
 'use client';
 import { useState } from 'react';
 import {
-  GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, linkWithCredential, EmailAuthProvider,
+  GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword,
+  linkWithCredential, EmailAuthProvider, User,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDocs, collection, setDoc, deleteDoc } from 'firebase/firestore';
 
 type Mode = 'choose' | 'login' | 'register';
+
+const saveMemberProfile = async (u: User | null) => {
+  if (!u || u.isAnonymous || !u.email) return;
+  await setDoc(doc(db, 'members', u.uid), {
+    email: u.email,
+    displayName: u.displayName || null,
+    provider: u.providerData?.[0]?.providerId || 'password',
+    joinedAt: u.metadata?.creationTime || null,
+    lastLogin: new Date().toISOString(),
+    uid: u.uid,
+  }, { merge: true }).catch(e => console.error('members write error:', e));
+};
+
+const migrateVotes = async (fromUid: string, toUid: string) => {
+  try {
+    const snap = await getDocs(collection(db, `users/${fromUid}/votes`));
+    await Promise.all(snap.docs.map(d =>
+      setDoc(doc(db, `users/${toUid}/votes/${d.id}`), d.data())
+    ));
+    const subSnap = await getDocs(collection(db, 'subscribers'));
+    const sub = subSnap.docs.find(d => d.id === fromUid);
+    if (sub) {
+      await setDoc(doc(db, 'subscribers', toUid), { ...sub.data(), userId: toUid });
+      await deleteDoc(doc(db, 'subscribers', fromUid));
+    }
+  } catch (e) {
+    console.error('migrate error', e);
+  }
+};
 
 export default function AuthModal({ onClose, anonUid }: {
   onClose: () => void;
@@ -19,45 +48,21 @@ export default function AuthModal({ onClose, anonUid }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Only needed when linkWithCredential fails (account already exists)
-  // At this point we're still authed as anon, so we CAN read the votes
-  const migrateVotes = async (fromUid: string, toUid: string) => {
-    try {
-      const snap = await getDocs(collection(db, `users/${fromUid}/votes`));
-      await Promise.all(snap.docs.map(d =>
-        setDoc(doc(db, `users/${toUid}/votes/${d.id}`), d.data())
-      ));
-      const subDoc = await getDocs(collection(db, 'subscribers'));
-      const sub = subDoc.docs.find(d => d.id === fromUid);
-      if (sub) {
-        await setDoc(doc(db, 'subscribers', toUid), { ...sub.data(), userId: toUid });
-        await deleteDoc(doc(db, 'subscribers', fromUid));
-      }
-    } catch (e) {
-      console.error('migrate error', e);
-    }
-  };
-
   const handleGoogle = async () => {
     setLoading(true);
     setError('');
     try {
       const provider = new GoogleAuthProvider();
       const currentUser = auth.currentUser;
-
       if (currentUser?.isAnonymous) {
         try {
-          // Best case: link anon account → keeps same uid, no migration needed
-          await linkWithCredential(currentUser, GoogleAuthProvider.credentialFromResult(
-            await signInWithPopup(auth, provider)
-          ) ?? (() => { throw new Error('no credential'); })());
+          const result = await signInWithPopup(auth, provider);
+          const credential = GoogleAuthProvider.credentialFromResult(result);
+          if (credential) await linkWithCredential(currentUser, credential);
         } catch (linkErr: any) {
-          if (linkErr.code === 'auth/credential-already-in-use' || linkErr.code === 'auth/provider-already-linked') {
-            // Account exists — migrate votes first while still anon, then sign in
+          if (linkErr.code === 'auth/credential-already-in-use') {
             const result = await signInWithPopup(auth, provider);
-            if (anonUid && anonUid !== result.user.uid) {
-              await migrateVotes(anonUid, result.user.uid);
-            }
+            if (anonUid && anonUid !== result.user.uid) await migrateVotes(anonUid, result.user.uid);
           } else if (linkErr.code !== 'auth/popup-closed-by-user') {
             throw linkErr;
           }
@@ -65,6 +70,7 @@ export default function AuthModal({ onClose, anonUid }: {
       } else {
         await signInWithPopup(auth, provider);
       }
+      await saveMemberProfile(auth.currentUser);
       onClose();
     } catch (e: any) {
       if (e.code !== 'auth/popup-closed-by-user') setError('Erro ao entrar com Google.');
@@ -86,7 +92,6 @@ export default function AuthModal({ onClose, anonUid }: {
       if (mode === 'register') {
         if (currentUser?.isAnonymous) {
           try {
-            // Best case: upgrade anon → real account, same uid
             await linkWithCredential(currentUser, credential);
           } catch (linkErr: any) {
             if (linkErr.code === 'auth/email-already-in-use') {
@@ -97,19 +102,15 @@ export default function AuthModal({ onClose, anonUid }: {
             throw linkErr;
           }
         } else {
+          const { createUserWithEmailAndPassword } = await import('firebase/auth');
           await createUserWithEmailAndPassword(auth, email, password);
         }
       } else {
-        // Login — migrate votes first while still anon
-        if (currentUser?.isAnonymous && anonUid) {
-          const result = await signInWithEmailAndPassword(auth, email, password);
-          if (anonUid !== result.user.uid) {
-            await migrateVotes(anonUid, result.user.uid);
-          }
-        } else {
-          await signInWithEmailAndPassword(auth, email, password);
-        }
+        const prevUid = currentUser?.isAnonymous ? anonUid : undefined;
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        if (prevUid && prevUid !== result.user.uid) await migrateVotes(prevUid, result.user.uid);
       }
+      await saveMemberProfile(auth.currentUser);
       onClose();
     } catch (e: any) {
       if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
@@ -129,7 +130,6 @@ export default function AuthModal({ onClose, anonUid }: {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl p-6 border" style={{ background: '#13131A', borderColor: 'rgba(255,255,255,0.1)' }}>
-
         <div className="flex items-center justify-between mb-6">
           <div>
             {mode !== 'choose' && (
