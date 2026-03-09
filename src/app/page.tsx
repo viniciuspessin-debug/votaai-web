@@ -131,7 +131,7 @@ function HomeCore() {
     if (ns === 3) showNotif('🔥 3 seguidas! Você tá no flow!');
     else if (ns === 5) showNotif('⚡ 5 votos! Vicia fácil hein?');
     else if (ns === 10) showNotif('👑 10 votos! Rei das enquetes!');
-    await castVote(id, choice, user.uid, city || undefined);
+    await castVote(id, choice, user.uid, city || undefined, user.isAnonymous);
     // Show WhatsApp modal after first vote if not subscribed
     if (!hasVotedRef.current) {
       hasVotedRef.current = true;
