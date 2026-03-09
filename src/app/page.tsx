@@ -163,7 +163,7 @@ function HomeCore() {
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col w-64 p-6 sticky top-0 h-screen border-r" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="mb-10">
-            <h1 className="text-4xl text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>VOTAAI</h1>
+            <a href="/" className="text-4xl text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em', textDecoration: 'none' }}>VOTAAI</a>
             <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Qual é a sua?</p>
           </div>
 
@@ -218,7 +218,7 @@ function HomeCore() {
           {/* Mobile header */}
           <div className="flex items-center justify-between mb-6 md:hidden">
             <div>
-              <h1 className="text-3xl text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>VOTAAI</h1>
+              <a href="/" className="text-3xl text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em', textDecoration: 'none' }}>VOTAAI</a>
               {votedCount > 0 && <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{votedCount} votos • 🔥 {streak}</p>}
             </div>
             <div className="flex gap-2 items-center">
