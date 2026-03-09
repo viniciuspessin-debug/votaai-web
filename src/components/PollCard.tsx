@@ -205,9 +205,9 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, 
             <button
               onClick={() => {
                 const url = poll.slug ? `https://votaai.app/p/${poll.slug}` : 'https://votaai.app';
-                const text = `${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote também! 🗳️`;
-                if (navigator.share) navigator.share({ title: poll.question, text, url });
-                else navigator.clipboard.writeText(text + '\n' + url);
+                const text = `🔥 ${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote também! 👉 ${url}`;
+                if (navigator.share) navigator.share({ title: poll.question, text });
+                else navigator.clipboard.writeText(text);
               }}
               className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
               style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
