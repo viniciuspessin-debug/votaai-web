@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PollCard from '@/components/PollCard';
 import CreatePollModal from '@/components/CreatePollModal';
 import CityMap from '@/components/CityMap';
@@ -7,7 +7,7 @@ import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensure
 import { auth, db } from '@/lib/firebase';
 import WhatsAppModal from '@/components/WhatsAppModal';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 function fmt(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
@@ -15,7 +15,7 @@ function fmt(n: number) {
   return String(n);
 }
 
-export default function Home({ highlightSlug }: { highlightSlug?: string } = {}) {
+export default function Home() {
   const [polls, setPolls] = useState<any[]>([]);
   const [votes, setVotes] = useState<Record<string, string>>({});
   const [user, setUser] = useState<User | null>(null);
@@ -29,10 +29,6 @@ export default function Home({ highlightSlug }: { highlightSlug?: string } = {})
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const pollRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const hasVotedRef = useRef(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -71,31 +67,10 @@ export default function Home({ highlightSlug }: { highlightSlug?: string } = {})
     return unsub;
   }, [user]);
 
-  // Scroll to highlighted poll
-  useEffect(() => {
-    if (!highlightSlug || polls.length === 0) return;
-    const poll = polls.find(p => p.slug === highlightSlug);
-    if (!poll) return;
-    setHighlightedId(poll.id);
-    setTimeout(() => {
-      const el = pollRefs.current[poll.id];
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => setHighlightedId(null), 3000);
-      }
-    }, 500);
-  }, [highlightSlug, polls]);
-
-  // User votes + check subscription
+  // User votes
   useEffect(() => {
     if (!user) return;
-    getUserVotes(user.uid).then(v => {
-      setVotes(v);
-      if (Object.keys(v).length > 0) hasVotedRef.current = true;
-    });
-    getDoc(doc(db, 'subscribers', user.uid)).then(snap => {
-      if (snap.exists()) setIsSubscribed(true);
-    }).catch(() => null);
+    getUserVotes(user.uid).then(setVotes);
   }, [user]);
 
   const showNotif = (msg: string) => {
@@ -113,8 +88,7 @@ export default function Home({ highlightSlug }: { highlightSlug?: string } = {})
     else if (ns === 10) showNotif('👑 10 votos! Rei das enquetes!');
     await castVote(id, choice, user.uid, city || undefined);
     // Show WhatsApp modal after first vote if not subscribed
-    if (!hasVotedRef.current) {
-      hasVotedRef.current = true;
+    if (Object.keys(votes).length === 0) {
       const sub = await getDoc(doc(db, 'subscribers', user.uid));
       if (!sub.exists()) setTimeout(() => setShowWhatsApp(true), 1500);
     }
@@ -264,9 +238,17 @@ export default function Home({ highlightSlug }: { highlightSlug?: string } = {})
                 </div>
               ) : (
                 filteredPolls.map((poll, i) => (
-                  <div key={poll.id} ref={el => { pollRefs.current[poll.id] = el; }} style={{ animationDelay: `${i * 0.05}s`, transition: 'box-shadow 0.5s', borderRadius: 16, boxShadow: highlightedId === poll.id ? '0 0 0 3px #FF4E8C, 0 0 30px #FF4E8C44' : 'none' }} className="animate-fade-up">
-                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={!isSubscribed && !!votes[poll.id]} onSubscribed={() => setIsSubscribed(true)} />
-
+                  <div key={poll.id} style={{ animationDelay: `${i * 0.05}s` }} className="animate-fade-up">
+                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} />
+                    {votes[poll.id] && (
+                      <button
+                        onClick={() => setShowCity(showCity === poll.id ? null : poll.id)}
+                        className="w-full text-xs py-2 mb-4 -mt-2 rounded-b-xl border-x border-b transition-colors text-center"
+                        style={{ borderColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.02)' }}
+                      >
+                        🗺️ {showCity === poll.id ? 'Esconder' : 'Ver'} resultado por cidade
+                      </button>
+                    )}
                     {showCity === poll.id && (
                       <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
                         <p className="text-xs font-bold tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>RESULTADO POR CIDADE</p>
@@ -345,14 +327,6 @@ export default function Home({ highlightSlug }: { highlightSlug?: string } = {})
                   </div>
                 ))}
               </div>
-
-              <button
-                onClick={() => signOut(auth)}
-                className="w-full py-3 rounded-xl text-sm font-bold border mb-6 transition-all hover:bg-white/5"
-                style={{ borderColor: 'rgba(255,82,82,0.3)', color: '#FF5252' }}
-              >
-                🚪 Sair da conta
-              </button>
 
               {votedCount > 0 && (
                 <>
