@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import PollCard from '@/components/PollCard';
 import CreatePollModal from '@/components/CreatePollModal';
@@ -154,7 +155,13 @@ function HomeCore() {
     }
   };
 
-  const trending = [...polls].sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0));
+  const hotPoll = polls.find(p => p.hotOfDay);
+  const trending = [
+    ...(hotPoll ? [hotPoll] : []),
+    ...[...polls]
+      .filter(p => !p.hotOfDay)
+      .sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0))
+  ];
   const allTags = ['todos', ...Array.from(new Set(polls.map(p => p.tag).filter(Boolean)))].slice(0, 12);
   const filteredPolls = polls.filter(p => {
     const matchesTag = !activeTag || activeTag === 'todos' || p.tag === activeTag;
@@ -320,22 +327,37 @@ function HomeCore() {
                 const pctA = total > 0 ? Math.round(((poll.votesA||0) / total) * 100) : 50;
                 const medals = ['🥇','🥈','🥉'];
                 const mColors = ['#F7B731','#AAAAAA','#CD7F32'];
-                return (
-                  <div key={poll.id} className="flex gap-4 p-5 rounded-2xl mb-3 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: poll.color + '22' }}>
-                    <span className="text-2xl font-black shrink-0" style={{ color: i < 3 ? mColors[i] : 'rgba(255,255,255,0.2)', fontFamily: 'var(--font-display)' }}>
-                      {i < 3 ? medals[i] : `#${i+1}`}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-white truncate">{poll.optionA?.emoji} {poll.optionA?.label} <span style={{ color: 'rgba(255,255,255,0.3)' }}>vs</span> {poll.optionB?.emoji} {poll.optionB?.label}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                          <div className="h-full rounded-full" style={{ width: `${pctA}%`, background: poll.color }} />
-                        </div>
-                        <span className="text-xs font-bold shrink-0" style={{ color: poll.color }}>{pctA}%</span>
-                      </div>
-                      <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{fmt(total)} votos</p>
-                    </div>
+                const isHot = poll.hotOfDay && i === 0;
+                const pollUrl = poll.slug ? `/p/${poll.slug}` : null;
+                const CardWrapper = ({ children }: { children: React.ReactNode }) => pollUrl ? (
+                  <a href={pollUrl} className="flex gap-4 p-5 rounded-2xl mb-3 border block transition-all hover:opacity-80" style={{ background: isHot ? 'rgba(255,78,140,0.07)' : 'rgba(255,255,255,0.03)', borderColor: isHot ? '#FF4E8C44' : poll.color + '22', textDecoration: 'none' }}>
+                    {children}
+                  </a>
+                ) : (
+                  <div className="flex gap-4 p-5 rounded-2xl mb-3 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: poll.color + '22' }}>
+                    {children}
                   </div>
+                );
+                return (
+                  <CardWrapper key={poll.id}>
+                    <div className="flex gap-4 flex-1 min-w-0">
+                      <span className="text-2xl font-black shrink-0" style={{ color: isHot ? '#FF4E8C' : i < 3 ? mColors[i] : 'rgba(255,255,255,0.2)', fontFamily: 'var(--font-display)' }}>
+                        {isHot ? '🔥' : i < 3 ? medals[i] : `#${i+1}`}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        {isHot && <span className="text-xs font-black tracking-widest px-2 py-0.5 rounded-full mb-1 inline-block" style={{ background: '#FF4E8C22', color: '#FF4E8C' }}>POLÊMICA DO DIA</span>}
+                        <p className="text-sm font-bold text-white truncate">{poll.question}</p>
+                        <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{poll.optionA?.emoji} {poll.optionA?.label} <span style={{ color: 'rgba(255,255,255,0.2)' }}>vs</span> {poll.optionB?.emoji} {poll.optionB?.label}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                            <div className="h-full rounded-full" style={{ width: `${pctA}%`, background: isHot ? '#FF4E8C' : poll.color }} />
+                          </div>
+                          <span className="text-xs font-bold shrink-0" style={{ color: isHot ? '#FF4E8C' : poll.color }}>{pctA}%</span>
+                        </div>
+                        <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{fmt(total)} votos</p>
+                      </div>
+                    </div>
+                  </CardWrapper>
                 );
               })}
             </div>
