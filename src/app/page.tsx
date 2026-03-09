@@ -212,20 +212,20 @@ function HomeCore() {
           </div>
         </aside>
 
-        {/* Main content */}
-        <main className="flex-1 px-4 py-6 pb-24 md:pb-6" style={{ minWidth: 0, width: '100%', maxWidth: 576, boxSizing: 'border-box', margin: '0 auto' }}>
-
-          {/* Mobile header */}
-          <div className="flex items-center justify-between mb-6 md:hidden">
-            <div>
-              <a href="/" className="text-3xl text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em', textDecoration: 'none' }}>VOTAAI</a>
-              {votedCount > 0 && <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{votedCount} votos • 🔥 {streak}</p>}
-            </div>
-            <div className="flex gap-2 items-center">
-              {streak >= 3 && <span className="text-sm font-bold px-3 py-1 rounded-full" style={{ background: '#FF6B3520', color: '#FF6B35' }}>🔥{streak}</span>}
-              <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-xl text-sm font-black text-white" style={{ background: '#6C63FF' }}>+ Criar</button>
-            </div>
+        {/* Fixed mobile header */}
+        <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 md:hidden" style={{ background: 'rgba(7,7,14,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div>
+            <a href="/" onClick={e => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-3xl text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em', textDecoration: 'none' }}>VOTAAI</a>
+            {votedCount > 0 && <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{votedCount} votos • 🔥 {streak}</p>}
           </div>
+          <div className="flex gap-2 items-center">
+            {streak >= 3 && <span className="text-sm font-bold px-3 py-1 rounded-full" style={{ background: '#FF6B3520', color: '#FF6B35' }}>🔥{streak}</span>}
+            <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-xl text-sm font-black text-white" style={{ background: '#6C63FF' }}>+ Criar</button>
+          </div>
+        </header>
+
+        {/* Main content */}
+        <main className="flex-1 px-4 pt-20 pb-24 md:pt-6 md:pb-6" style={{ minWidth: 0, width: '100%', maxWidth: 576, boxSizing: 'border-box', margin: '0 auto' }}>
 
           {/* FEED */}
           {tab === 'feed' && (
