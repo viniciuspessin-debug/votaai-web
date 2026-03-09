@@ -50,11 +50,11 @@ function HomeCore() {
           setDoc(doc(db, 'members', u.uid), {
             email: u.email,
             displayName: u.displayName || null,
-            provider: u.providerData[0]?.providerId || 'email',
+            provider: u.providerData[0]?.providerId || 'password',
             joinedAt: u.metadata.creationTime || null,
             lastLogin: new Date().toISOString(),
             uid: u.uid,
-          }, { merge: true }).catch(() => null);
+          }, { merge: true }).catch(e => console.error('members write error:', e));
         }
       }
     });
@@ -214,8 +214,8 @@ function HomeCore() {
               + CRIAR
             </button>
             {isAnon ? (
-              <button onClick={handleGoogleLogin} className="w-full py-3 rounded-xl text-sm font-bold border transition-all hover:bg-white/5" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
-                🔗 Entrar com Google
+              <button onClick={() => setShowAuth(true)} className="w-full py-3 rounded-xl text-sm font-bold border transition-all hover:bg-white/5" style={{ borderColor: '#6C63FF66', color: '#6C63FF' }}>
+                👤 Entrar / Cadastrar
               </button>
             ) : (
               <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
