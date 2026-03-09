@@ -158,7 +158,7 @@ function HomeCore() {
       )}
 
       {/* Desktop layout */}
-      <div className="max-w-6xl mx-auto flex min-h-screen" style={{ overflowX: 'hidden', width: '100%' }}>
+      <div className="max-w-6xl mx-auto flex min-h-screen" style={{ width: '100%' }}>
 
         {/* Sidebar */}
         <aside className="hidden md:flex flex-col w-64 p-6 sticky top-0 h-screen border-r" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
