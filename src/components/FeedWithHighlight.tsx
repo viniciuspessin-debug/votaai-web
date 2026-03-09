@@ -1,7 +1,6 @@
 'use client';
-import Home, { HomeProps } from '@/app/page';
+import { HomeCore } from '@/app/page';
 
 export default function FeedWithHighlight({ slug }: { slug: string }) {
-  const props: HomeProps = { highlightSlug: slug };
-  return <Home {...props} />;
+  return <HomeCore highlightSlug={slug} />;
 }

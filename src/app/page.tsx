@@ -16,7 +16,7 @@ function fmt(n: number) {
 }
 
 export type HomeProps = { highlightSlug?: string };
-export default function Home({ highlightSlug }: HomeProps = {}) {
+export function HomeCore({ highlightSlug }: HomeProps = {}) {
   const [polls, setPolls] = useState<any[]>([]);
   const [votes, setVotes] = useState<Record<string, string>>({});
   const [user, setUser] = useState<User | null>(null);
@@ -399,3 +399,5 @@ export default function Home({ highlightSlug }: HomeProps = {}) {
     </div>
   );
 }
+
+export default function Home() { return <HomeCore />; }
