@@ -15,8 +15,8 @@ function fmt(n: number) {
   return String(n);
 }
 
-export type HomeProps = { highlightSlug?: string };
-export function HomeCore({ highlightSlug }: HomeProps = {}) {
+function HomeCore() {
+  const highlightSlug = typeof window !== 'undefined' ? sessionStorage.getItem('highlightSlug') || undefined : undefined;
   const [polls, setPolls] = useState<any[]>([]);
   const [votes, setVotes] = useState<Record<string, string>>({});
   const [user, setUser] = useState<User | null>(null);
