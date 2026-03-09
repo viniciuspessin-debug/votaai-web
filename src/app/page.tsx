@@ -15,7 +15,7 @@ function fmt(n: number) {
   return String(n);
 }
 
-export default function Home() {
+export default function Home({ highlightSlug }: { highlightSlug?: string } = {}) {
   const [polls, setPolls] = useState<any[]>([]);
   const [votes, setVotes] = useState<Record<string, string>>({});
   const [user, setUser] = useState<User | null>(null);
@@ -29,6 +29,8 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const pollRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasVotedRef = useRef(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
@@ -68,6 +70,21 @@ export default function Home() {
     });
     return unsub;
   }, [user]);
+
+  // Scroll to highlighted poll
+  useEffect(() => {
+    if (!highlightSlug || polls.length === 0) return;
+    const poll = polls.find(p => p.slug === highlightSlug);
+    if (!poll) return;
+    setHighlightedId(poll.id);
+    setTimeout(() => {
+      const el = pollRefs.current[poll.id];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => setHighlightedId(null), 3000);
+      }
+    }, 500);
+  }, [highlightSlug, polls]);
 
   // User votes + check subscription
   useEffect(() => {
@@ -247,7 +264,7 @@ export default function Home() {
                 </div>
               ) : (
                 filteredPolls.map((poll, i) => (
-                  <div key={poll.id} style={{ animationDelay: `${i * 0.05}s` }} className="animate-fade-up">
+                  <div key={poll.id} ref={el => { pollRefs.current[poll.id] = el; }} style={{ animationDelay: `${i * 0.05}s`, transition: 'box-shadow 0.5s', borderRadius: 16, boxShadow: highlightedId === poll.id ? '0 0 0 3px #FF4E8C, 0 0 30px #FF4E8C44' : 'none' }} className="animate-fade-up">
                     <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={!isSubscribed && !!votes[poll.id]} onSubscribed={() => setIsSubscribed(true)} />
 
                     {showCity === poll.id && (

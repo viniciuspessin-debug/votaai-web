@@ -1,10 +1,29 @@
 import {
   collection, doc, getDocs, addDoc, updateDoc,
-  increment, onSnapshot, orderBy, query,
+  increment, onSnapshot, orderBy, query, where,
   serverTimestamp, setDoc, getDoc,
 } from 'firebase/firestore';
 import { signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { db, auth } from './firebase';
+
+export function generateSlug(question: string): string {
+  return question
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 80)
+    + '-' + Math.random().toString(36).slice(2, 7);
+}
+
+export async function getPollBySlug(slug: string) {
+  const q = query(collection(db, 'polls'), where('slug', '==', slug));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
 
 export async function ensureAuth() {
   if (!auth.currentUser) {
@@ -52,6 +71,7 @@ export async function createPoll({ question, optionA, optionB, tag, color, userI
     question, optionA, optionB, tag, color,
     votesA: 0, votesB: 0, totalVotes: 0,
     cities: {},
+    slug: generateSlug(question),
     order: lastOrder,
     createdBy: userId,
     createdAt: serverTimestamp(),

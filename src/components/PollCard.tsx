@@ -204,7 +204,8 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, 
             </span>
             <button
               onClick={() => {
-                const text = `${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote no VotaAí! 🗳️\nhttps://votaai.app`;
+                const url = poll.slug ? `https://votaai.app/p/${poll.slug}` : 'https://votaai.app';
+                const text = `${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} (${pctA}%) vs ${poll.optionB.emoji} ${poll.optionB.label} (${pctB}%)\n\nVote também! 🗳️\n${url}`;
                 if (navigator.share) navigator.share({ text });
                 else navigator.clipboard.writeText(text);
               }}
