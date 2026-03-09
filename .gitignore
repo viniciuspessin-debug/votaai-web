@@ -3,3 +3,7 @@ node_modules
 .env.local
 .DS_Store
 serviceAccountKey.json
+clear-anon-members.js
+find-duplicates.js
+delete-duplicates.js
+backfill-members.js
