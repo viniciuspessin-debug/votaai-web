@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useRef } from 'react';
-import Home from '@/app/page';
+import Home, { HomeProps } from '@/app/page';
 
 export default function FeedWithHighlight({ slug }: { slug: string }) {
-  return <Home highlightSlug={slug} />;
+  const props: HomeProps = { highlightSlug: slug };
+  return <Home {...props} />;
 }
