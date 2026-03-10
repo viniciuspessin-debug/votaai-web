@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc, orderBy, query, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, setDoc, serverTimestamp, getDoc, updateDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { signInWithGoogle } from '@/lib/polls';
@@ -21,7 +21,8 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'order' | 'popular'>('order');
   const [toast, setToast] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'polls' | 'categories' | 'whatsapp' | 'members'>('polls');
+  const [activeTab, setActiveTab] = useState<'polls' | 'categories' | 'whatsapp' | 'members' | 'pagamentos'>('polls');
+  const [saques, setSaques] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_TAGS);
   const [newCat, setNewCat] = useState('');
   const [savingCat, setSavingCat] = useState(false);
@@ -39,6 +40,10 @@ export default function AdminPage() {
       fetchCategories();
       fetchSubscribers();
       fetchMembers();
+      // Real-time saques listener
+      const q = query(collection(db, 'saques'), orderBy('requestedAt', 'desc'));
+      const unsub = onSnapshot(q, snap => setSaques(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      return unsub;
     }
   }, [user]);
 
@@ -186,12 +191,13 @@ export default function AdminPage() {
         <div className="max-w-4xl mx-auto p-6">
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-5 gap-4 mb-6">
             {[
               { label: 'Enquetes', value: polls.length, emoji: '📋', color: '#6C63FF' },
               { label: 'Votos totais', value: fmt(totalVotes), emoji: '🗳️', color: '#00C9A7' },
               { label: 'Membros', value: members.length, emoji: '👥', color: '#FF4E8C' },
               { label: 'Inscritos ZAP', value: subscribers.length, emoji: '💬', color: '#25D366' },
+              { label: 'Saques pend.', value: saques.filter(s => s.status === 'pendente').length, emoji: '💸', color: '#F7B731' },
             ].map(s => (
               <div key={s.label} className="rounded-2xl p-4 border text-center" style={{ background: 'rgba(255,255,255,0.03)', borderColor: s.color + '33' }}>
                 <div className="text-xl mb-1">{s.emoji}</div>
@@ -208,6 +214,7 @@ export default function AdminPage() {
               { id: 'members', label: '👥 Membros' },
               { id: 'whatsapp', label: '💬 WhatsApp' },
               { id: 'categories', label: '🏷️ Categorias' },
+              { id: 'pagamentos', label: '💸 Pagamentos' },
             ].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id as any)} className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeTab === t.id ? '#6C63FF' : 'rgba(255,255,255,0.05)', color: activeTab === t.id ? 'white' : 'rgba(255,255,255,0.4)' }}>
                 {t.label}
@@ -360,6 +367,62 @@ export default function AdminPage() {
           )}
 
           {/* CATEGORIES TAB */}
+          {activeTab === 'pagamentos' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {saques.filter(s => s.status === 'pendente').length} pendentes · {saques.filter(s => s.status === 'pago').length} pagos
+                </p>
+              </div>
+              {saques.length === 0 && (
+                <div className="text-center py-12" style={{ color: 'rgba(255,255,255,0.2)' }}>Nenhuma solicitação ainda</div>
+              )}
+              {saques.map(s => (
+                <div key={s.id} className="rounded-2xl p-5 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: s.status === 'pago' ? 'rgba(34,197,94,0.2)' : s.status === 'pendente' ? 'rgba(247,183,49,0.3)' : 'rgba(255,82,82,0.2)' }}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{
+                          background: s.status === 'pago' ? 'rgba(34,197,94,0.15)' : s.status === 'pendente' ? 'rgba(247,183,49,0.15)' : 'rgba(255,82,82,0.15)',
+                          color: s.status === 'pago' ? '#4ADE80' : s.status === 'pendente' ? '#F7B731' : '#FF5252',
+                        }}>
+                          {s.status === 'pago' ? '✅ PAGO' : s.status === 'pendente' ? '⏳ PENDENTE' : '❌ RECUSADO'}
+                        </span>
+                        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          {s.requestedAt?.toDate?.().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) || '—'}
+                        </span>
+                      </div>
+                      <p className="text-white font-bold">{s.email}</p>
+                      <div className="flex items-center gap-4 mt-2">
+                        <span className="text-lg font-black" style={{ color: '#F7B731' }}>R${s.valor?.toFixed(2)}</span>
+                        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.coins} coins</span>
+                      </div>
+                      <div className="mt-2 px-3 py-2 rounded-xl inline-flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <span className="text-xs font-bold uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>{s.pixType}</span>
+                        <span className="text-sm font-black text-white">{s.pixKey}</span>
+                        <button onClick={() => navigator.clipboard.writeText(s.pixKey)} className="text-xs px-2 py-0.5 rounded-lg transition-all hover:bg-white/10" style={{ color: '#6C63FF' }}>copiar</button>
+                      </div>
+                    </div>
+                    {s.status === 'pendente' && (
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <button
+                          onClick={async () => { await updateDoc(doc(db, 'saques', s.id), { status: 'pago', paidAt: serverTimestamp() }); }}
+                          className="px-4 py-2 rounded-xl text-xs font-black transition-all"
+                          style={{ background: 'rgba(34,197,94,0.2)', color: '#4ADE80', border: '1px solid rgba(34,197,94,0.3)' }}
+                        >✅ Marcar pago</button>
+                        <button
+                          onClick={async () => { await updateDoc(doc(db, 'saques', s.id), { status: 'recusado' }); }}
+                          className="px-4 py-2 rounded-xl text-xs font-black transition-all"
+                          style={{ background: 'rgba(255,82,82,0.1)', color: '#FF5252', border: '1px solid rgba(255,82,82,0.2)' }}
+                        >❌ Recusar</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {activeTab === 'categories' && (
             <div>
               <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.4)' }}>Categorias aparecem no modal de criação de enquetes. As categorias padrão não podem ser removidas.</p>

@@ -18,47 +18,93 @@ function fmt(n: number) {
   return String(n);
 }
 
-function SaqueForm({ coins, email, onSaque }: { coins: number; email: string; onSaque: () => void }) {
-  const [pix, setPix] = useState('');
+function SaqueForm({ coins, email, uid, onSaque }: { coins: number; email: string; uid: string; onSaque: () => void }) {
+  const [pixKey, setPixKey] = useState('');
+  const [pixType, setPixType] = useState<'cpf' | 'email' | 'telefone' | 'aleatoria'>('email');
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
 
   const handleSaque = async () => {
-    if (!pix.trim()) return;
+    if (!pixKey.trim()) return;
     setSending(true);
-    window.open(`mailto:vinicius.pessin@gmail.com?subject=Saque VotaCoins — ${email}&body=Olá! Quero sacar meus ${coins} VotaCoins (R$${(coins * 0.01).toFixed(2)}).%0A%0AChave PIX: ${pix}%0AEmail da conta: ${email}`, '_blank');
-    setSent(true);
+    try {
+      const { doc, setDoc, serverTimestamp, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      // Save withdrawal request to Firestore
+      const saqueId = `${uid}_${Date.now()}`;
+      await setDoc(doc(db, 'saques', saqueId), {
+        uid,
+        email,
+        coins,
+        valor: parseFloat((coins * 0.01).toFixed(2)),
+        pixKey: pixKey.trim(),
+        pixType,
+        status: 'pendente',
+        requestedAt: serverTimestamp(),
+      });
+      // Zero out coins
+      await updateDoc(doc(db, 'members', uid), { votaCoins: 0 });
+      setSent(true);
+      onSaque();
+    } catch (e) {
+      console.error('Saque error:', e);
+    }
     setSending(false);
   };
 
   if (sent) return (
-    <div className="text-center py-3">
-      <p className="text-sm font-black" style={{ color: '#4ADE80' }}>✅ Solicitação enviada!</p>
-      <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Você receberá o PIX em até 48h úteis.</p>
+    <div className="text-center py-4">
+      <div className="text-3xl mb-2">🎉</div>
+      <p className="text-sm font-black text-white">Solicitação enviada!</p>
+      <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Você receberá R${(coins * 0.01).toFixed(2)} via PIX em até 48h úteis.</p>
     </div>
   );
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.5)' }}>Chave PIX para receber R${(coins * 0.01).toFixed(2)}:</p>
+    <div className="space-y-3">
+      <p className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        Valor a receber: <span style={{ color: '#4ADE80' }}>R${(coins * 0.01).toFixed(2)}</span>
+      </p>
+      {/* PIX type selector */}
+      <div className="grid grid-cols-4 gap-1">
+        {(['cpf','email','telefone','aleatoria'] as const).map(t => (
+          <button key={t} onClick={() => setPixType(t)}
+            className="py-1.5 rounded-lg text-xs font-bold transition-all capitalize"
+            style={{
+              background: pixType === t ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.05)',
+              color: pixType === t ? '#4ADE80' : 'rgba(255,255,255,0.3)',
+              border: `1px solid ${pixType === t ? 'rgba(34,197,94,0.4)' : 'transparent'}`,
+            }}>
+            {t === 'aleatoria' ? 'Aleat.' : t}
+          </button>
+        ))}
+      </div>
       <input
         className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none border"
         style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(34,197,94,0.3)' }}
-        placeholder="CPF, email ou telefone"
-        value={pix}
-        onChange={e => setPix(e.target.value)}
+        placeholder={
+          pixType === 'cpf' ? '000.000.000-00' :
+          pixType === 'email' ? 'seu@email.com' :
+          pixType === 'telefone' ? '(11) 99999-9999' :
+          'Chave aleatória'
+        }
+        value={pixKey}
+        onChange={e => setPixKey(e.target.value)}
       />
       <button
         onClick={handleSaque}
-        disabled={!pix.trim() || sending}
-        className="w-full py-2.5 rounded-xl text-sm font-black transition-all"
+        disabled={!pixKey.trim() || sending}
+        className="w-full py-3 rounded-xl text-sm font-black transition-all"
         style={{
-          background: pix.trim() ? 'linear-gradient(90deg, #22C55E, #16A34A)' : 'rgba(255,255,255,0.07)',
-          color: pix.trim() ? 'white' : 'rgba(255,255,255,0.3)',
+          background: pixKey.trim() ? 'linear-gradient(90deg, #22C55E, #16A34A)' : 'rgba(255,255,255,0.07)',
+          color: pixKey.trim() ? 'white' : 'rgba(255,255,255,0.3)',
         }}
       >
-        💸 Solicitar saque via PIX
+        {sending ? '⏳ Enviando...' : '💸 Solicitar saque via PIX'}
       </button>
+      <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.2)' }}>
+        Seus coins serão zerados após a solicitação
+      </p>
     </div>
   );
 }
@@ -488,7 +534,7 @@ function HomeCore() {
                     </div>
                   </div>
                   {votaCoins >= 2000 ? (
-                    <SaqueForm coins={votaCoins} email={user?.email || ''} onSaque={() => {}} />
+                    <SaqueForm coins={votaCoins} email={user?.email || ''} uid={user?.uid || ''} onSaque={() => {}} />
                   ) : (
                     <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
                       Faltam {Math.max(0, 2000 - votaCoins)} coins para sacar · Vote mais enquetes!
