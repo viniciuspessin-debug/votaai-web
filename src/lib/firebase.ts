@@ -4,7 +4,7 @@ import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAts2gnUCTGn6JNYm3p6bSloKIbqp6vhsI",
-  authDomain: "votaai.app",
+  authDomain: "votaai-9b91d.firebaseapp.com",
   projectId: "votaai-9b91d",
   storageBucket: "votaai-9b91d.firebasestorage.app",
   messagingSenderId: "397158117689",
