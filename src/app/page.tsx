@@ -59,30 +59,21 @@ function ContatoForm({ userEmail, userName }: { userEmail: string; userName: str
     setStep('sending');
     setError('');
     try {
-      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      const res = await fetch('/api/contato', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'origin': 'https://votaai.app',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          service_id: EMAILJS_SERVICE,
-          template_id: EMAILJS_TEMPLATE,
-          user_id: EMAILJS_PUBKEY,
-          template_params: {
-            from_name: userName,
-            user_email: userEmail,
-            topic,
-            message,
-          },
+          from_name: userName,
+          user_email: userEmail,
+          topic,
+          message,
         }),
       });
-      const text = await res.text();
-      console.log('EmailJS response:', res.status, text);
+      const data = await res.json();
       if (res.ok) {
         setStep('done');
       } else {
-        setError('Erro ' + res.status + ': ' + text);
+        setError('Erro ao enviar: ' + (data.error || 'tente novamente'));
         setStep('form');
       }
     } catch (err: any) {
