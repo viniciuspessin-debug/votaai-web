@@ -716,8 +716,6 @@ export default function AdminPage() {
               </div>
             </div>
           )}
-        </div>
-
           {activeTab === 'cards' && (
             <CardGenerator polls={polls} />
           )}
