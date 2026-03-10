@@ -166,10 +166,16 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, 
         <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
 
           {/* WhatsApp capture — só no primeiro voto, só para membros */}
-          {isFirstVote && isAnon && onShowAuth && (
-            <div className="mt-3 p-3 rounded-xl text-center cursor-pointer" onClick={onShowAuth} style={{ background: 'rgba(247,183,49,0.08)', border: '1px solid rgba(247,183,49,0.2)' }}>
-              <p className="text-xs font-black" style={{ color: '#F7B731' }}>🪙 Cadastre-se e ganhe VotaCoins!</p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>1 voto = 1 VotaCoin = R$0,01 · Saque a partir de R$20</p>
+          {isAnon && onShowAuth && (
+            <div className="mt-3 p-3 rounded-2xl cursor-pointer active:scale-95 transition-transform" onClick={onShowAuth}
+              style={{ background: 'linear-gradient(135deg, rgba(247,183,49,0.12), rgba(255,107,53,0.08))', border: '1px solid rgba(247,183,49,0.3)' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black" style={{ color: '#F7B731' }}>🎁 Ganhe 50 VotaCoins de bônus!</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Crie sua conta agora · +1 coin por voto · Saque a partir de R$20</p>
+                </div>
+                <span className="text-lg ml-3">→</span>
+              </div>
             </div>
           )}
           {isFirstVote && !phoneSaved && !isAnon && (

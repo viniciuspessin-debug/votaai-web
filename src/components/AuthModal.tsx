@@ -170,16 +170,20 @@ export default function AuthModal({ onClose, anonUid }: {
 
         {mode === 'choose' && (
           <div className="space-y-3">
-            {/* VotaCoins banner */}
-            <div className="p-3 rounded-xl text-center mb-1" style={{ background: 'rgba(247,183,49,0.08)', border: '1px solid rgba(247,183,49,0.2)' }}>
-              <p className="text-xs font-bold" style={{ color: '#F7B731' }}>🪙 Ganhe VotaCoins votando!</p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>1 voto = 1 VotaCoin = R$0,01 · Saque mín. R${SAQUE_MINIMO / 100}</p>
+            {/* VotaCoins bonus banner */}
+            <div className="p-4 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, rgba(247,183,49,0.12), rgba(255,107,53,0.08))', border: '1px solid rgba(247,183,49,0.3)' }}>
+              <div className="text-2xl mb-1">🎁</div>
+              <p className="text-sm font-black text-white">Ganhe <span style={{ color: '#F7B731' }}>{WELCOME_BONUS} VotaCoins</span> de bônus!</p>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>Só por criar sua conta agora · Vale R${(WELCOME_BONUS * 0.01).toFixed(2)}</p>
+              <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>+ 1 VotaCoin por voto · Saque mín. R${SAQUE_MINIMO / 100}</p>
+              </div>
             </div>
-            <button onClick={() => setMode('login')} className="w-full py-3.5 rounded-xl font-bold text-sm transition-all" style={{ background: '#6C63FF', color: 'white' }}>
-              Entrar com email
+            <button onClick={() => setMode('register')} className="w-full py-3.5 rounded-xl font-bold text-sm transition-all" style={{ background: 'linear-gradient(90deg, #6C63FF, #FF6B35)', color: 'white' }}>
+              🎁 Criar conta e ganhar bônus
             </button>
-            <button onClick={() => setMode('register')} className="w-full py-3.5 rounded-xl font-bold text-sm border transition-all hover:bg-white/5" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
-              Criar conta com email
+            <button onClick={() => setMode('login')} className="w-full py-3.5 rounded-xl font-bold text-sm border transition-all hover:bg-white/5" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+              Já tenho conta — entrar
             </button>
             <button onClick={onClose} className="w-full py-2 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
               Continuar sem conta
