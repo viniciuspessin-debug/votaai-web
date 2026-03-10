@@ -92,38 +92,6 @@ export default function AuthModal({ onClose, anonUid }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const provider = new GoogleAuthProvider();
-      const currentUser = auth.currentUser;
-      let isNew = false;
-      if (currentUser?.isAnonymous) {
-        try {
-          const result = await signInWithPopup(auth, provider);
-          const credential = GoogleAuthProvider.credentialFromResult(result);
-          if (credential) await linkWithCredential(currentUser, credential);
-          isNew = true;
-        } catch (linkErr: any) {
-          if (linkErr.code === 'auth/credential-already-in-use') {
-            const result = await signInWithPopup(auth, provider);
-            if (anonUid && anonUid !== result.user.uid) await migrateVotes(anonUid, result.user.uid);
-          } else if (linkErr.code !== 'auth/popup-closed-by-user') {
-            throw linkErr;
-          }
-        }
-      } else {
-        await signInWithPopup(auth, provider);
-      }
-      await saveMemberProfile(auth.currentUser, phone || undefined, isNew);
-      onClose();
-    } catch (e: any) {
-      if (e.code !== 'auth/popup-closed-by-user') setError('Erro ao entrar com Google.');
-    }
-    setLoading(false);
-  };
-
   const handleEmailAuth = async () => {
     if (!email || password.length < 6) {
       setError('Email válido e senha com mínimo 6 caracteres.');
