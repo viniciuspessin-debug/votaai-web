@@ -480,8 +480,8 @@ function HomeCore() {
                 <p className="font-black text-white text-lg">{user?.displayName || (isAnon ? 'Votante Anônimo' : user?.email)}</p>
                 <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{city ? `📍 ${city}` : 'Localização desconhecida'}</p>
                 {isAnon && (
-                  <button onClick={handleGoogleLogin} className="mt-4 px-5 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: '#6C63FF66', color: '#6C63FF' }}>
-                    🔗 Conectar Google
+                  <button onClick={() => setShowAuth(true)} className="mt-4 px-5 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: '#6C63FF66', color: '#6C63FF' }}>
+                    📧 Criar conta
                   </button>
                 )}
               </div>
