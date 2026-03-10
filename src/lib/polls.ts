@@ -62,9 +62,12 @@ export async function castVote(pollId: string, choice: string, userId: string, c
   const update: any = { [field]: increment(1), totalVotes: increment(1) };
   if (cityField) update[cityField] = increment(1);
   await updateDoc(doc(db, 'polls', pollId), update);
-  // Increment voteCount only for non-anonymous users
+  // Increment voteCount and votaCoins only for non-anonymous users
   if (!isAnonymous) {
-    setDoc(doc(db, 'members', userId), { voteCount: increment(1) }, { merge: true }).catch(() => null);
+    setDoc(doc(db, 'members', userId), {
+      voteCount: increment(1),
+      votaCoins: increment(1),
+    }, { merge: true }).catch(() => null);
   }
 }
 

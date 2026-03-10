@@ -33,6 +33,7 @@ function HomeCore() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [votaCoins, setVotaCoins] = useState(0);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const pollRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasVotedRef = useRef(false);
@@ -46,21 +47,20 @@ function HomeCore() {
         setUser(user);
       } else {
         setUser(u);
-        // Save profile to Firestore if not anonymous — always update on login
+        // Load votaCoins and save profile if not anonymous
         if (!u.isAnonymous && u.email) {
-          u.reload().then(() => {
-            const fresh = auth.currentUser;
-            if (!fresh || fresh.isAnonymous || !fresh.email) return;
-            // Always write all fields with merge — fills gaps from castVote partial docs
-            setDoc(doc(db, 'members', fresh.uid), {
-              email: fresh.email,
-              displayName: fresh.displayName || null,
-              provider: fresh.providerData[0]?.providerId || 'password',
-              joinedAt: fresh.metadata.creationTime || null,
+          getDoc(doc(db, 'members', u.uid)).then(snap => {
+            if (snap.exists()) setVotaCoins(snap.data()?.votaCoins || 0);
+            // Update profile fields
+            setDoc(doc(db, 'members', u.uid), {
+              email: u.email,
+              displayName: u.displayName || null,
+              provider: u.providerData[0]?.providerId || 'password',
+              joinedAt: u.metadata.creationTime || null,
               lastLogin: new Date().toISOString(),
-              uid: fresh.uid,
+              uid: u.uid,
             }, { merge: true }).catch(e => console.error('members write error:', e));
-          });
+          }).catch(() => null);
         }
       }
     });
@@ -132,6 +132,7 @@ function HomeCore() {
     else if (ns === 5) showNotif('⚡ 5 votos! Vicia fácil hein?');
     else if (ns === 10) showNotif('👑 10 votos! Rei das enquetes!');
     await castVote(id, choice, user.uid, city || undefined, user.isAnonymous);
+    if (!user.isAnonymous) setVotaCoins(c => c + 1);
     // Show WhatsApp modal after first vote if not subscribed
     if (!hasVotedRef.current) {
       hasVotedRef.current = true;
@@ -248,8 +249,11 @@ function HomeCore() {
             {isAnon ? (
               <button onClick={() => setShowAuth(true)} className="px-3 py-2 rounded-xl text-xs font-black border" style={{ borderColor: '#6C63FF66', color: '#6C63FF' }}>Entrar</button>
             ) : (
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black" style={{ background: '#6C63FF22', color: '#6C63FF', border: '1px solid #6C63FF44' }}>
-                {(user?.displayName || user?.email || '?')[0].toUpperCase()}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black px-2 py-1 rounded-full" style={{ background: 'rgba(247,183,49,0.15)', color: '#F7B731' }}>🪙 {votaCoins}</span>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black" style={{ background: '#6C63FF22', color: '#6C63FF', border: '1px solid #6C63FF44' }}>
+                  {(user?.displayName || user?.email || '?')[0].toUpperCase()}
+                </div>
               </div>
             )}
             <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-xl text-sm font-black text-white" style={{ background: '#6C63FF' }}>+ Criar</button>
@@ -393,6 +397,42 @@ function HomeCore() {
                   </div>
                 ))}
               </div>
+
+              {/* VotaCoins card */}
+              {!isAnon && (
+                <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(247,183,49,0.05)', borderColor: 'rgba(247,183,49,0.2)' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-xs font-bold tracking-widest" style={{ color: '#F7B731' }}>🪙 VOTACOINS</p>
+                      <p className="text-3xl font-black text-white mt-1" style={{ fontFamily: 'var(--font-display)' }}>{votaCoins} <span className="text-base" style={{ color: 'rgba(255,255,255,0.4)' }}>= R${(votaCoins * 0.01).toFixed(2)}</span></p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Saque mín.</p>
+                      <p className="text-sm font-black" style={{ color: '#F7B731' }}>R$20,00</p>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      <span>{votaCoins} coins</span>
+                      <span>2.000 coins</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.min((votaCoins / 2000) * 100, 100)}%`, background: 'linear-gradient(90deg, #F7B731, #FF6B35)' }} />
+                    </div>
+                  </div>
+                  {votaCoins >= 2000 ? (
+                    <a href={`mailto:vinicius.pessin@gmail.com?subject=Saque VotaCoins&body=Olá! Quero sacar meus ${votaCoins} VotaCoins (R$${(votaCoins * 0.01).toFixed(2)}). Meu email: ${user?.email}`}
+                      className="w-full py-2.5 rounded-xl text-sm font-black text-center block transition-all"
+                      style={{ background: 'linear-gradient(90deg, #F7B731, #FF6B35)', color: 'white' }}>
+                      💸 Solicitar saque via PIX
+                    </a>
+                  ) : (
+                    <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      Faltam {2000 - votaCoins} coins para sacar · Vote mais enquetes!
+                    </p>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={() => signOut(auth)}
