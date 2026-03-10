@@ -137,7 +137,7 @@ function HomeCore() {
     return unsub;
   }, [user]);
 
-  // Scroll to highlighted poll
+  // Scroll to highlighted poll — clear sessionStorage after scroll so votes don't re-trigger it
   useEffect(() => {
     if (!highlightSlug || polls.length === 0) return;
     const poll = polls.find(p => p.slug === highlightSlug);
@@ -147,6 +147,7 @@ function HomeCore() {
       const el = pollRefs.current[poll.id];
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        sessionStorage.removeItem('highlightSlug');
         setTimeout(() => setHighlightedId(null), 3000);
       }
     }, 500);
