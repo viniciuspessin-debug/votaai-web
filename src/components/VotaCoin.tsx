@@ -2,28 +2,32 @@ export default function VotaCoin({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="coinGrad" cx="40%" cy="35%" r="60%">
-          <stop offset="0%" stopColor="#4ADE80" />
-          <stop offset="50%" stopColor="#16A34A" />
-          <stop offset="100%" stopColor="#14532D" />
+        <radialGradient id="coinGold" cx="38%" cy="32%" r="65%">
+          <stop offset="0%" stopColor="#FFF176" />
+          <stop offset="35%" stopColor="#FFD700" />
+          <stop offset="70%" stopColor="#F59E0B" />
+          <stop offset="100%" stopColor="#92400E" />
         </radialGradient>
-        <radialGradient id="shineGrad" cx="35%" cy="30%" r="50%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.35" />
+        <radialGradient id="coinShine" cx="30%" cy="25%" r="45%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.6" />
           <stop offset="100%" stopColor="white" stopOpacity="0" />
         </radialGradient>
+        <filter id="coinShadow">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#92400E" floodOpacity="0.5" />
+        </filter>
       </defs>
-      {/* Coin shadow */}
-      <ellipse cx="16" cy="17" rx="13" ry="3" fill="rgba(0,0,0,0.25)" />
+      {/* Shadow */}
+      <ellipse cx="16" cy="18" rx="12" ry="3" fill="rgba(0,0,0,0.3)" />
       {/* Coin body */}
-      <circle cx="16" cy="15" r="13" fill="url(#coinGrad)" />
-      {/* Coin edge */}
-      <circle cx="16" cy="15" r="13" fill="none" stroke="#15803D" strokeWidth="1" />
+      <circle cx="16" cy="15" r="13" fill="url(#coinGold)" filter="url(#coinShadow)" />
+      {/* Rim */}
+      <circle cx="16" cy="15" r="13" fill="none" stroke="#B45309" strokeWidth="1" />
       {/* Inner ring */}
-      <circle cx="16" cy="15" r="10" fill="none" stroke="#22C55E" strokeWidth="0.8" opacity="0.6" />
-      {/* R$ symbol */}
-      <text x="16" y="20" textAnchor="middle" fill="white" fontSize="10" fontWeight="900" fontFamily="Arial, sans-serif" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>R$</text>
-      {/* Shine overlay */}
-      <circle cx="16" cy="15" r="13" fill="url(#shineGrad)" />
+      <circle cx="16" cy="15" r="10.5" fill="none" stroke="#FDE68A" strokeWidth="0.7" opacity="0.7" />
+      {/* V$ text */}
+      <text x="16" y="20.5" textAnchor="middle" fill="#7C2D12" fontSize="9.5" fontWeight="900" fontFamily="Arial Black, Arial, sans-serif">V$</text>
+      {/* Shine */}
+      <circle cx="16" cy="15" r="13" fill="url(#coinShine)" />
     </svg>
   );
 }

@@ -428,6 +428,9 @@ function HomeCore() {
           {/* PERFIL */}
           {tab === 'perfil' && (
             <div>
+              <div className="flex items-center justify-between mb-6">
+                <button onClick={() => setTab('feed')} className="text-2xl font-black text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em', background: 'none', border: 'none', cursor: 'pointer' }}>← VOTAAI</button>
+              </div>
               <div className="rounded-2xl p-6 mb-4 text-center border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: '#6C63FF33' }}>
                 <div className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl border-2" style={{ background: '#6C63FF22', borderColor: '#6C63FF' }}>
                   {isAnon ? '🗳️' : '😎'}
@@ -492,7 +495,7 @@ function HomeCore() {
               )}
 
               <button
-                onClick={() => signOut(auth)}
+                onClick={() => { signOut(auth); setTab('feed'); }}
                 className="w-full py-3 rounded-xl text-sm font-bold border mb-6 transition-all hover:bg-white/5"
                 style={{ borderColor: 'rgba(255,82,82,0.3)', color: '#FF5252' }}
               >
