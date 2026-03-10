@@ -13,6 +13,218 @@ function fmt(n: number) {
   return String(n || 0);
 }
 
+
+function parseSlug(slug: string) {
+  return slug
+    .replace(/-[a-z0-9]{5}$/, '')
+    .replace(/-/g, ' ')
+    .replace(/\w/g, (c: string) => c.toUpperCase());
+}
+
+async function callClaude(prompt: string) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: 'Você é um assistente criativo para redes sociais brasileiras. Responda sempre em JSON puro, sem markdown.',
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+const CARD_FORMATS = [
+  { id: 'stories', label: 'Stories 9:16', w: 1080, h: 1920, scale: 0.17 },
+  { id: 'feed', label: 'Feed 1:1', w: 1080, h: 1080, scale: 0.24 },
+  { id: 'twitter', label: 'Twitter 16:9', w: 1200, h: 675, scale: 0.30 },
+  { id: 'whatsapp', label: 'WhatsApp', w: 800, h: 800, scale: 0.28 },
+];
+
+function PollCardPreview({ fmt, question, optA, optB, pctA, url }: any) {
+  const pctB = 100 - pctA;
+  const W = fmt.w * fmt.scale;
+  const H = fmt.h * fmt.scale;
+  const isStory = fmt.id === 'stories';
+  const qFont = isStory ? 22 : fmt.id === 'twitter' ? 18 : 20;
+  const oFont = isStory ? 14 : 12;
+
+  return (
+    <div style={{ width: W, height: H, position: 'relative', overflow: 'hidden', borderRadius: 10, flexShrink: 0,
+      background: 'linear-gradient(135deg, #0d0d1a, #1a0a2e 40%, #0a1628)',
+      boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}>
+      <div style={{ position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse at 20% 20%, rgba(108,99,255,0.25) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(255,78,140,0.2) 0%, transparent 50%)' }} />
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+        justifyContent: 'space-between', padding: isStory ? `${H*0.07}px ${W*0.07}px` : `${H*0.08}px ${W*0.06}px` }}>
+        {/* Logo */}
+        <div style={{ fontSize: isStory ? 12 : 9, fontWeight: 900, letterSpacing: 3, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+          VOTAAI 🔥
+        </div>
+        {/* Question */}
+        <div style={{ fontSize: qFont, fontWeight: 700, color: 'white', lineHeight: 1.3,
+          borderLeft: '3px solid #FF4E8C', paddingLeft: 12 }}>
+          {question || 'Sua enquete aqui'}
+        </div>
+        {/* Bars */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: isStory ? 10 : 7 }}>
+          {[{ label: optA, pct: pctA, color: '#6C63FF', e: '✅' }, { label: optB, pct: pctB, color: '#FF4E8C', e: '❌' }].map((o, i) => (
+            <div key={i}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: oFont, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>{o.e} {o.label}</span>
+                <span style={{ fontSize: oFont, color: o.color, fontWeight: 900 }}>{o.pct}%</span>
+              </div>
+              <div style={{ height: isStory ? 7 : 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${o.pct}%`, borderRadius: 99, background: o.color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* CTA */}
+        <div style={{ background: 'linear-gradient(90deg, #6C63FF, #FF4E8C)', borderRadius: isStory ? 14 : 10,
+          padding: isStory ? '12px 16px' : '8px 12px', textAlign: 'center' }}>
+          <div style={{ fontSize: isStory ? 13 : 10, fontWeight: 900, color: 'white' }}>🗳️ Vote você também</div>
+          <div style={{ fontSize: isStory ? 11 : 9, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', marginTop: 2 }}>
+            {url || 'votaai.app'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CardGenerator({ polls }: { polls: any[] }) {
+  const [selectedPoll, setSelectedPoll] = useState<any>(null);
+  const [question, setQuestion] = useState('');
+  const [optA, setOptA] = useState('Sim');
+  const [optB, setOptB] = useState('Não');
+  const [pctA, setPctA] = useState(55);
+  const [caption, setCaption] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [activeFormat, setActiveFormat] = useState('stories');
+  const [copied, setCopied] = useState(false);
+
+  const handleSelectPoll = async (poll: any) => {
+    setSelectedPoll(poll);
+    setQuestion(poll.question || '');
+    setOptA(poll.optionA?.label || 'Sim');
+    setOptB(poll.optionB?.label || 'Não');
+    const total = (poll.votesA || 0) + (poll.votesB || 0);
+    const pct = total > 0 ? Math.round(((poll.votesA || 0) / total) * 100) : 55;
+    setPctA(pct);
+    setCaption('');
+    setIsGenerating(true);
+    try {
+      const url = `https://votaai.app/p/${poll.slug}`;
+      const raw = await callClaude(
+        `Enquete brasileira: "${poll.question}"\nOpção A: "${poll.optionA?.label}" (${pct}%)\nOpção B: "${poll.optionB?.label}" (${100-pct}%)\nURL: ${url}\n\nGere um JSON com:\n{\n  "caption": "legenda viral para Instagram com emojis e hashtags brasileiras relevantes. Máx 220 chars. Termine com CTA para votar."\n}`
+      );
+      const json = JSON.parse(raw.replace(/\`\`\`json|\`\`\`/g, '').trim());
+      setCaption(json.caption || '');
+    } catch (e) {
+      setCaption(`🔥 ${poll.question}\n\nVote e ganhe VotaCoins! 👉 votaai.app/p/${poll.slug}\n\n#votaai #enquete #poll`);
+    }
+    setIsGenerating(false);
+  };
+
+  const fmt = CARD_FORMATS.find(f => f.id === activeFormat)!;
+  const pollUrl = selectedPoll?.slug ? `votaai.app/p/${selectedPoll.slug}` : 'votaai.app';
+
+  return (
+    <div>
+      {/* Poll selector */}
+      <p className="text-xs font-bold tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+        SELECIONE A ENQUETE
+      </p>
+      <div className="grid grid-cols-1 gap-2 mb-6" style={{ maxHeight: 220, overflowY: 'auto' }}>
+        {polls.map(p => (
+          <button key={p.id} onClick={() => handleSelectPoll(p)}
+            className="text-left px-4 py-3 rounded-xl text-sm transition-all"
+            style={{
+              background: selectedPoll?.id === p.id ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${selectedPoll?.id === p.id ? 'rgba(108,99,255,0.5)' : 'rgba(255,255,255,0.06)'}`,
+              color: selectedPoll?.id === p.id ? 'white' : 'rgba(255,255,255,0.5)',
+            }}>
+            {p.hotOfDay && <span className="text-xs font-black mr-2" style={{ color: '#FF4E8C' }}>🔥</span>}
+            {p.question}
+          </button>
+        ))}
+      </div>
+
+      {selectedPoll && (
+        <>
+          {/* Format tabs */}
+          <div className="flex gap-2 mb-5 flex-wrap">
+            {CARD_FORMATS.map(f => (
+              <button key={f.id} onClick={() => setActiveFormat(f.id)}
+                className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                style={{ background: activeFormat === f.id ? '#FF4E8C' : 'rgba(255,255,255,0.05)', color: activeFormat === f.id ? 'white' : 'rgba(255,255,255,0.4)' }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Preview */}
+          <div className="flex justify-center items-center rounded-2xl mb-5 p-8"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', minHeight: 300 }}>
+            {isGenerating ? (
+              <div className="text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                <div className="text-3xl mb-2">⏳</div>
+                <p className="text-sm">Gerando legenda com IA...</p>
+              </div>
+            ) : (
+              <PollCardPreview fmt={fmt} question={question} optA={optA} optB={optB} pctA={pctA} url={pollUrl} />
+            )}
+          </div>
+
+          {/* Adjustments */}
+          <div className="rounded-2xl p-5 mb-5 border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <p className="text-xs font-bold tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>AJUSTAR</p>
+            <div className="space-y-3">
+              <textarea value={question} onChange={e => setQuestion(e.target.value)} rows={2}
+                className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none border resize-none"
+                style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }} />
+              <div className="flex gap-3">
+                <input value={optA} onChange={e => setOptA(e.target.value)} placeholder="Opção A"
+                  className="flex-1 rounded-xl px-3 py-2 text-sm text-white outline-none border"
+                  style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(108,99,255,0.3)' }} />
+                <input value={optB} onChange={e => setOptB(e.target.value)} placeholder="Opção B"
+                  className="flex-1 rounded-xl px-3 py-2 text-sm text-white outline-none border"
+                  style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,78,140,0.3)' }} />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs w-16" style={{ color: 'rgba(255,255,255,0.4)' }}>A: {pctA}%</span>
+                <input type="range" min={20} max={80} value={pctA} onChange={e => setPctA(+e.target.value)} className="flex-1" style={{ accentColor: '#6C63FF' }} />
+                <span className="text-xs w-16 text-right" style={{ color: 'rgba(255,255,255,0.4)' }}>B: {100-pctA}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Caption */}
+          {caption && (
+            <div className="rounded-2xl p-5 border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-xs font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>LEGENDA GERADA POR IA</p>
+                <button onClick={() => { navigator.clipboard.writeText(caption + '\n\n👉 ' + pollUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+                  style={{ background: copied ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.07)', color: copied ? '#4ADE80' : 'rgba(255,255,255,0.5)' }}>
+                  {copied ? '✅ Copiado!' : '📋 Copiar legenda'}
+                </button>
+              </div>
+              <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={4}
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none border resize-none"
+                style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }} />
+              <p className="text-xs mt-2 font-black" style={{ color: '#6C63FF' }}>👉 {pollUrl}</p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -71,7 +283,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'order' | 'popular'>('order');
   const [toast, setToast] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'polls' | 'categories' | 'whatsapp' | 'members' | 'pagamentos'>('polls');
+  const [activeTab, setActiveTab] = useState<'polls' | 'categories' | 'whatsapp' | 'members' | 'pagamentos' | 'cards'>('polls');
   const [saques, setSaques] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_TAGS);
   const [newCat, setNewCat] = useState('');
@@ -266,6 +478,7 @@ export default function AdminPage() {
               { id: 'whatsapp', label: '💬 WhatsApp' },
               { id: 'categories', label: '🏷️ Categorias' },
               { id: 'pagamentos', label: '💸 Pagamentos' },
+              { id: 'cards', label: '🎨 Cards' },
             ].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id as any)} className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all" style={{ background: activeTab === t.id ? '#6C63FF' : 'rgba(255,255,255,0.05)', color: activeTab === t.id ? 'white' : 'rgba(255,255,255,0.4)' }}>
                 {t.label}
@@ -503,6 +716,12 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        </div>
+
+          {activeTab === 'cards' && (
+            <CardGenerator polls={polls} />
+          )}
+
         </div>
       )}
     </div>
