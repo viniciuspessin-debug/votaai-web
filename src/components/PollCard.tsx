@@ -46,6 +46,8 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, 
       subscribedAt: serverTimestamp(),
       active: true,
     });
+    // Also save phone to members so it links to email account
+    await setDoc(doc(db, 'members', userId), { phone: digits }, { merge: true }).catch(() => null);
     setPhoneSaved(true);
     setSavingPhone(false);
     if (onSubscribed) onSubscribed();

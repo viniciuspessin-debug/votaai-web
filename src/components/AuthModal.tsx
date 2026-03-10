@@ -9,6 +9,13 @@ import { doc, getDocs, collection, setDoc, deleteDoc, increment } from 'firebase
 
 type Mode = 'choose' | 'login' | 'register';
 
+const formatPhone = (v: string) => {
+  const digits = v.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+};
+
 const WELCOME_BONUS = 50;
 const SAQUE_MINIMO = 2000;
 
@@ -23,7 +30,10 @@ const saveMemberProfile = async (u: User | null, phone?: string, isNew?: boolean
     uid: u.uid,
   };
   if (phone) data.phone = phone.replace(/\D/g, '');
-  if (isNew) data.votaCoins = increment(WELCOME_BONUS);
+  if (isNew) {
+    data.votaCoins = increment(WELCOME_BONUS);
+    data.welcomeBonusGranted = true;
+  }
   await setDoc(doc(db, 'members', u.uid), data, { merge: true })
     .catch(e => console.error('members write error:', e));
 
@@ -229,10 +239,10 @@ export default function AuthModal({ onClose, anonUid }: {
                 <input
                   className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none border"
                   style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}
-                  placeholder="WhatsApp (opcional)"
+                  placeholder="(11) 99999-9999"
                   type="tel"
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
+                  onChange={e => setPhone(formatPhone(e.target.value))}
                   inputMode="tel"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>opcional</span>

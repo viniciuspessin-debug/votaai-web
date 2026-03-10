@@ -8,6 +8,7 @@ import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensure
 import { auth, db } from '@/lib/firebase';
 import WhatsAppModal from '@/components/WhatsAppModal';
 import AuthModal from '@/components/AuthModal';
+import VotaCoin from '@/components/VotaCoin';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 
@@ -15,6 +16,51 @@ function fmt(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
   return String(n);
+}
+
+function SaqueForm({ coins, email, onSaque }: { coins: number; email: string; onSaque: () => void }) {
+  const [pix, setPix] = useState('');
+  const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const handleSaque = async () => {
+    if (!pix.trim()) return;
+    setSending(true);
+    window.open(`mailto:vinicius.pessin@gmail.com?subject=Saque VotaCoins — ${email}&body=Olá! Quero sacar meus ${coins} VotaCoins (R$${(coins * 0.01).toFixed(2)}).%0A%0AChave PIX: ${pix}%0AEmail da conta: ${email}`, '_blank');
+    setSent(true);
+    setSending(false);
+  };
+
+  if (sent) return (
+    <div className="text-center py-3">
+      <p className="text-sm font-black" style={{ color: '#4ADE80' }}>✅ Solicitação enviada!</p>
+      <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Você receberá o PIX em até 48h úteis.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.5)' }}>Chave PIX para receber R${(coins * 0.01).toFixed(2)}:</p>
+      <input
+        className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none border"
+        style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(34,197,94,0.3)' }}
+        placeholder="CPF, email ou telefone"
+        value={pix}
+        onChange={e => setPix(e.target.value)}
+      />
+      <button
+        onClick={handleSaque}
+        disabled={!pix.trim() || sending}
+        className="w-full py-2.5 rounded-xl text-sm font-black transition-all"
+        style={{
+          background: pix.trim() ? 'linear-gradient(90deg, #22C55E, #16A34A)' : 'rgba(255,255,255,0.07)',
+          color: pix.trim() ? 'white' : 'rgba(255,255,255,0.3)',
+        }}
+      >
+        💸 Solicitar saque via PIX
+      </button>
+    </div>
+  );
 }
 
 function HomeCore() {
@@ -53,8 +99,9 @@ function HomeCore() {
             if (snap.exists()) {
               const data = snap.data();
               setVotaCoins(data?.votaCoins || 0);
-              if (data?.phone) setIsSubscribed(true); // already has WhatsApp
+              if (data?.phone) setIsSubscribed(true);
             }
+            // Update profile but never overwrite votaCoins here
             setDoc(doc(db, 'members', u.uid), {
               email: u.email,
               displayName: u.displayName || null,
@@ -234,8 +281,17 @@ function HomeCore() {
                 👤 Entrar / Cadastrar
               </button>
             ) : (
-              <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
-                👤 {user?.displayName || user?.email || 'Anônimo'}
+              <div className="space-y-2">
+                <button onClick={() => setTab('perfil')} className="w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all hover:bg-white/5" style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                  <div className="flex items-center gap-2">
+                    <VotaCoin size={18} />
+                    <span className="text-sm font-black" style={{ color: '#4ADE80' }}>{votaCoins} coins</span>
+                  </div>
+                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>= R${(votaCoins * 0.01).toFixed(2)}</span>
+                </button>
+                <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
+                  👤 {user?.displayName || user?.email || 'Anônimo'}
+                </div>
               </div>
             )}
           </div>
@@ -253,7 +309,10 @@ function HomeCore() {
               <button onClick={() => setShowAuth(true)} className="px-3 py-2 rounded-xl text-xs font-black border" style={{ borderColor: '#6C63FF66', color: '#6C63FF' }}>Entrar</button>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black px-2 py-1 rounded-full" style={{ background: 'rgba(247,183,49,0.15)', color: '#F7B731' }}>🪙 {votaCoins}</span>
+                <button onClick={() => setTab('perfil')} className="flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                    <VotaCoin size={16} />
+                    <span className="text-xs font-black" style={{ color: '#4ADE80' }}>{votaCoins}</span>
+                  </button>
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black" style={{ background: '#6C63FF22', color: '#6C63FF', border: '1px solid #6C63FF44' }}>
                   {(user?.displayName || user?.email || '?')[0].toUpperCase()}
                 </div>
@@ -403,10 +462,13 @@ function HomeCore() {
 
               {/* VotaCoins card */}
               {!isAnon && (
-                <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(247,183,49,0.05)', borderColor: 'rgba(247,183,49,0.2)' }}>
+                <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.2)' }}>
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-xs font-bold tracking-widest" style={{ color: '#F7B731' }}>🪙 VOTACOINS</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <VotaCoin size={22} />
+                        <p className="text-xs font-bold tracking-widest" style={{ color: '#4ADE80' }}>VOTACOINS</p>
+                      </div>
                       <p className="text-3xl font-black text-white mt-1" style={{ fontFamily: 'var(--font-display)' }}>{votaCoins} <span className="text-base" style={{ color: 'rgba(255,255,255,0.4)' }}>= R${(votaCoins * 0.01).toFixed(2)}</span></p>
                     </div>
                     <div className="text-right">
@@ -424,14 +486,10 @@ function HomeCore() {
                     </div>
                   </div>
                   {votaCoins >= 2000 ? (
-                    <a href={`mailto:vinicius.pessin@gmail.com?subject=Saque VotaCoins&body=Olá! Quero sacar meus ${votaCoins} VotaCoins (R$${(votaCoins * 0.01).toFixed(2)}). Meu email: ${user?.email}`}
-                      className="w-full py-2.5 rounded-xl text-sm font-black text-center block transition-all"
-                      style={{ background: 'linear-gradient(90deg, #F7B731, #FF6B35)', color: 'white' }}>
-                      💸 Solicitar saque via PIX
-                    </a>
+                    <SaqueForm coins={votaCoins} email={user?.email || ''} onSaque={() => {}} />
                   ) : (
                     <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      Faltam {2000 - votaCoins} coins para sacar · Vote mais enquetes!
+                      Faltam {Math.max(0, 2000 - votaCoins)} coins para sacar · Vote mais enquetes!
                     </p>
                   )}
                 </div>
