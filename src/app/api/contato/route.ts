@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const EMAILJS_SERVICE = 'service_66uw6li';
-const EMAILJS_TEMPLATE = 'template_76po9x4';
-const EMAILJS_PUBKEY = 'eT0ZVOr7EfY3mr8Ty';
-
 export async function POST(req: NextRequest) {
   try {
     const { from_name, user_email, topic, message } = await req.json();
@@ -12,22 +8,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer re_5bKNXwEf_8UnR1rfBxuaJiLpix74fKBRM',
+      },
       body: JSON.stringify({
-        service_id: EMAILJS_SERVICE,
-        template_id: EMAILJS_TEMPLATE,
-        user_id: EMAILJS_PUBKEY,
-        template_params: { from_name, user_email, topic, message },
+        from: 'VotaAí <onboarding@resend.dev>',
+        to: ['pessin@votaai.app'],
+        subject: `[VotaAí] ${topic} - ${from_name}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #6C63FF;">📨 Nova mensagem no VotaAí</h2>
+            <table style="width:100%; border-collapse: collapse;">
+              <tr><td style="padding: 8px; font-weight: bold; color: #666;">Assunto</td><td style="padding: 8px;">${topic}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold; color: #666;">Nome</td><td style="padding: 8px;">${from_name}</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold; color: #666;">E-mail</td><td style="padding: 8px;">${user_email}</td></tr>
+            </table>
+            <div style="margin-top: 16px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
+              <strong>Mensagem:</strong><br/><br/>
+              ${message.replace(/\n/g, '<br/>')}
+            </div>
+          </div>
+        `,
       }),
     });
 
-    const text = await res.text();
-    console.log('EmailJS:', res.status, text);
+    const data = await res.json();
+    console.log('Resend:', res.status, data);
 
     if (!res.ok) {
-      return NextResponse.json({ error: text }, { status: 500 });
+      return NextResponse.json({ error: data.message || 'Erro no envio' }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
