@@ -61,12 +61,14 @@ function ContatoForm({ userEmail, userName }: { userEmail: string; userName: str
     try {
       const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'origin': 'https://votaai.app',
+        },
         body: JSON.stringify({
           service_id: EMAILJS_SERVICE,
           template_id: EMAILJS_TEMPLATE,
           user_id: EMAILJS_PUBKEY,
-          accessToken: EMAILJS_PUBKEY,
           template_params: {
             from_name: userName,
             user_email: userEmail,
@@ -322,9 +324,9 @@ function HomeCore() {
 
   // Geolocation
   useEffect(() => {
-    fetch('https://freeipapi.com/api/json')
+    fetch('https://ipapi.co/json/')
       .then(r => r.json())
-      .then(d => setCity(d.cityName || null))
+      .then(d => setCity(d.city || null))
       .catch(() => null);
   }, []);
 
