@@ -5,7 +5,7 @@ import {
   linkWithCredential, EmailAuthProvider, User,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDocs, collection, setDoc, deleteDoc, increment } from 'firebase/firestore';
+import { doc, getDocs, collection, setDoc, deleteDoc } from 'firebase/firestore';
 
 type Mode = 'choose' | 'login' | 'register';
 
@@ -21,21 +21,35 @@ const SAQUE_MINIMO = 2000;
 
 const saveMemberProfile = async (u: User | null, phone?: string, isNew?: boolean) => {
   if (!u || u.isAnonymous || !u.email) return;
-  const data: any = {
-    email: u.email,
-    displayName: u.displayName || null,
-    provider: u.providerData?.[0]?.providerId || 'password',
-    joinedAt: u.metadata?.creationTime || null,
-    lastLogin: new Date().toISOString(),
-    uid: u.uid,
-  };
-  if (phone) data.phone = phone.replace(/\D/g, '');
+  const ref = doc(db, 'members', u.uid);
+
   if (isNew) {
-    data.votaCoins = increment(WELCOME_BONUS);
-    data.welcomeBonusGranted = true;
+    // Create document fresh with welcome bonus as plain number
+    const data: any = {
+      email: u.email,
+      displayName: u.displayName || null,
+      provider: u.providerData?.[0]?.providerId || 'password',
+      joinedAt: u.metadata?.creationTime || null,
+      lastLogin: new Date().toISOString(),
+      uid: u.uid,
+      votaCoins: WELCOME_BONUS,
+      voteCount: 0,
+      welcomeBonusGranted: true,
+    };
+    if (phone) data.phone = phone.replace(/\D/g, '');
+    await setDoc(ref, data).catch(e => console.error('members write error:', e));
+  } else {
+    // Existing user — just update login fields, never touch votaCoins
+    const data: any = {
+      email: u.email,
+      displayName: u.displayName || null,
+      provider: u.providerData?.[0]?.providerId || 'password',
+      lastLogin: new Date().toISOString(),
+      uid: u.uid,
+    };
+    if (phone) data.phone = phone.replace(/\D/g, '');
+    await setDoc(ref, data, { merge: true }).catch(e => console.error('members write error:', e));
   }
-  await setDoc(doc(db, 'members', u.uid), data, { merge: true })
-    .catch(e => console.error('members write error:', e));
 
   // Also save to subscribers if phone provided
   if (phone) {
