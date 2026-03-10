@@ -3,7 +3,7 @@ import {
   increment, onSnapshot, orderBy, query, where,
   serverTimestamp, setDoc, getDoc,
 } from 'firebase/firestore';
-import { signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { db, auth } from './firebase';
 
 export function generateSlug(question: string): string {
@@ -34,7 +34,16 @@ export async function ensureAuth() {
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
+  // Use redirect on mobile/when popup is blocked, popup on desktop
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    return signInWithRedirect(auth, provider);
+  }
   return signInWithPopup(auth, provider);
+}
+
+export async function getGoogleRedirectResult() {
+  return getRedirectResult(auth);
 }
 
 export function subscribeToPolls(callback: (polls: any[]) => void) {

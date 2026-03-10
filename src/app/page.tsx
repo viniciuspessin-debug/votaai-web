@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import PollCard from '@/components/PollCard';
 import CreatePollModal from '@/components/CreatePollModal';
 import CityMap from '@/components/CityMap';
-import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensureAuth, signInWithGoogle } from '@/lib/polls';
+import { subscribeToPolls, getUserVotes, castVote, createPoll, seedPolls, ensureAuth } from '@/lib/polls';
 import { auth, db } from '@/lib/firebase';
 import WhatsAppModal from '@/components/WhatsAppModal';
 import AuthModal from '@/components/AuthModal';
@@ -242,14 +242,7 @@ function HomeCore() {
     showNotif('🎉 Enquete publicada!');
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      await signInWithGoogle();
-      showNotif('✅ Login feito com sucesso!');
-    } catch (e) {
-      showNotif('❌ Erro ao fazer login');
-    }
-  };
+
 
   const hotPoll = polls.find(p => p.hotOfDay);
   const trending = [

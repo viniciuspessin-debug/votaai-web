@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, deleteDoc, setDoc, serverTimestamp, getDoc, updateDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { signInWithGoogle } from '@/lib/polls';
+import { onAuthStateChanged, User, signInWithEmailAndPassword } from 'firebase/auth';
+
 
 const ADMIN_EMAIL = 'vinicius.pessin@gmail.com';
 const DEFAULT_TAGS = ['comida','vida','esporte','estilo de vida','rotina','superpoderes','trabalho','tecnologia','entretenimento','outro'];
@@ -11,6 +11,56 @@ const DEFAULT_TAGS = ['comida','vida','esporte','estilo de vida','rotina','super
 function fmt(n: number) {
   if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
   return String(n || 0);
+}
+
+function AdminLogin() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (e: any) {
+      setError('Email ou senha incorretos.');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <input
+        className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none border"
+        style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(108,99,255,0.3)' }}
+        placeholder="Email"
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && handleLogin()}
+      />
+      <input
+        className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none border"
+        style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(108,99,255,0.3)' }}
+        placeholder="Senha"
+        type="password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && handleLogin()}
+      />
+      {error && <p className="text-xs text-center" style={{ color: '#FF5252' }}>{error}</p>}
+      <button
+        onClick={handleLogin}
+        disabled={loading || !email || !password}
+        className="w-full py-3 rounded-xl text-sm font-black text-white transition-all"
+        style={{ background: email && password ? '#6C63FF' : 'rgba(255,255,255,0.07)' }}
+      >
+        {loading ? '⏳ Entrando...' : '🔐 Entrar'}
+      </button>
+    </div>
+  );
 }
 
 export default function AdminPage() {
@@ -178,13 +228,14 @@ export default function AdminPage() {
 
       {!isAdmin ? (
         <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="text-center max-w-sm">
-            <div className="text-6xl mb-6">🔒</div>
-            <h1 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>ACESSO RESTRITO</h1>
-            <p className="text-sm mb-8" style={{ color: 'rgba(255,255,255,0.4)' }}>Essa página é exclusiva para administradores.</p>
-            {user && <p className="text-xs mb-4 px-4 py-2 rounded-xl" style={{ background: 'rgba(255,82,82,0.15)', color: '#FF5252' }}>Logado como {user.email} — sem permissão</p>}
-            <button onClick={signInWithGoogle} className="px-6 py-3 rounded-xl font-black text-white text-sm" style={{ background: '#6C63FF' }}>🔗 Entrar com Google</button>
-            <a href="/" className="block mt-4 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>← Voltar ao site</a>
+          <div className="w-full max-w-sm">
+            <div className="text-center mb-8">
+              <div className="text-5xl mb-4">🔒</div>
+              <h1 className="text-3xl font-black text-white mb-1" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>VOTAAI</h1>
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Painel administrativo</p>
+            </div>
+            <AdminLogin />
+            <a href="/" className="block mt-6 text-sm text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>← Voltar ao site</a>
           </div>
         </div>
       ) : (
