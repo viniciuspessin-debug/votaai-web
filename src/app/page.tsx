@@ -9,7 +9,7 @@ import { auth, db } from '@/lib/firebase';
 import WhatsAppModal from '@/components/WhatsAppModal';
 import AuthModal from '@/components/AuthModal';
 import VotaCoin from '@/components/VotaCoin';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 
 function fmt(n: number) {
@@ -93,20 +93,22 @@ function HomeCore() {
         setUser(user);
       } else {
         setUser(u);
-        // Load votaCoins — never write votaCoins here, only AuthModal does that
+        // Listen to members doc in real-time so bonus/coins update immediately
         if (!u.isAnonymous && u.email) {
-          getDoc(doc(db, 'members', u.uid)).then(snap => {
+          const unsubMember = onSnapshot(doc(db, 'members', u.uid), snap => {
             if (snap.exists()) {
               const data = snap.data();
               setVotaCoins(data?.votaCoins ?? 0);
               if (data?.phone) setIsSubscribed(true);
-              setDoc(doc(db, 'members', u.uid), {
-                email: u.email,
-                displayName: u.displayName || null,
-                lastLogin: new Date().toISOString(),
-              }, { merge: true }).catch(() => null);
             }
-          }).catch(e => console.error('[members] getDoc error:', e));
+          }, e => console.error('[members] onSnapshot error:', e));
+          // Update last login metadata
+          setDoc(doc(db, 'members', u.uid), {
+            email: u.email,
+            displayName: u.displayName || null,
+            lastLogin: new Date().toISOString(),
+          }, { merge: true }).catch(() => null);
+          return unsubMember;
         }
       }
     });
