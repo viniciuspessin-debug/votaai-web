@@ -16,6 +16,25 @@ const EMAILJS_SERVICE = 'service_66uw6li';
 const EMAILJS_TEMPLATE = 'template_76po9x4';
 const EMAILJS_PUBKEY = 'eT0ZVOr7EfY3mr8Ty';
 
+async function sendEmailJS(params: Record<string, string>) {
+  const res = await fetch(`https://api.emailjs.com/api/v1.0/email/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service_id: EMAILJS_SERVICE,
+      template_id: EMAILJS_TEMPLATE,
+      user_id: EMAILJS_PUBKEY,
+      accessToken: EMAILJS_PUBKEY,
+      template_params: params,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+  return res;
+}
+
 const TOPICS = [
   '💡 Sugestão de enquete',
   '🐛 Reportar problema',
@@ -40,13 +59,14 @@ function ContatoForm({ userEmail, userName }: { userEmail: string; userName: str
     setStep('sending');
     setError('');
     try {
-      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           service_id: EMAILJS_SERVICE,
           template_id: EMAILJS_TEMPLATE,
           user_id: EMAILJS_PUBKEY,
+          accessToken: EMAILJS_PUBKEY,
           template_params: {
             from_name: userName,
             user_email: userEmail,
@@ -55,8 +75,16 @@ function ContatoForm({ userEmail, userName }: { userEmail: string; userName: str
           },
         }),
       });
-      setStep('done');
-    } catch {
+      const text = await res.text();
+      console.log('EmailJS response:', res.status, text);
+      if (res.ok) {
+        setStep('done');
+      } else {
+        setError('Erro ' + res.status + ': ' + text);
+        setStep('form');
+      }
+    } catch (err: any) {
+      console.error('EmailJS error:', err);
       setError('Erro ao enviar. Tente novamente.');
       setStep('form');
     }
