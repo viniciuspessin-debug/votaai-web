@@ -170,12 +170,6 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, 
               <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>1 voto = 1 VotaCoin = R$0,01 · Saque a partir de R$20</p>
             </div>
           )}
-          {isFirstVote && isAnon && onShowAuth && (
-            <div className="mt-3 p-3 rounded-xl text-center cursor-pointer" onClick={onShowAuth} style={{ background: 'rgba(247,183,49,0.08)', border: '1px solid rgba(247,183,49,0.2)' }}>
-              <p className="text-xs font-black" style={{ color: '#F7B731' }}>🪙 Cadastre-se e ganhe VotaCoins!</p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>1 voto = 1 VotaCoin = R$0,01 · Saque a partir de R$20</p>
-            </div>
-          )}
           {isFirstVote && !phoneSaved && !isAnon && (
             <div className="mb-3 p-3 rounded-xl" style={{ background: 'rgba(37,211,102,0.07)', border: '1px solid #25D36622' }}>
               <p className="text-xs font-black mb-2" style={{ color: '#25D366' }}>🔥 Receba a Polêmica do Dia no WhatsApp</p>
