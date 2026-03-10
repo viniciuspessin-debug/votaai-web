@@ -9,13 +9,15 @@ function fmt(n: number) {
   return String(n);
 }
 
-export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, onSubscribed }: {
+export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, onSubscribed, isAnon, onShowAuth }: {
   poll: any;
   onVote: (id: string, choice: string) => void;
   userVote?: string;
   userId?: string;
   isFirstVote?: boolean;
   onSubscribed?: () => void;
+  isAnon?: boolean;
+  onShowAuth?: () => void;
 }) {
   const [hovering, setHovering] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
@@ -161,8 +163,20 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, 
       {voted && (
         <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
 
-          {/* WhatsApp capture — só no primeiro voto */}
-          {isFirstVote && !phoneSaved && (
+          {/* WhatsApp capture — só no primeiro voto, só para membros */}
+          {isFirstVote && isAnon && onShowAuth && (
+            <div className="mt-3 p-3 rounded-xl text-center cursor-pointer" onClick={onShowAuth} style={{ background: 'rgba(247,183,49,0.08)', border: '1px solid rgba(247,183,49,0.2)' }}>
+              <p className="text-xs font-black" style={{ color: '#F7B731' }}>🪙 Cadastre-se e ganhe VotaCoins!</p>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>1 voto = 1 VotaCoin = R$0,01 · Saque a partir de R$20</p>
+            </div>
+          )}
+          {isFirstVote && isAnon && onShowAuth && (
+            <div className="mt-3 p-3 rounded-xl text-center cursor-pointer" onClick={onShowAuth} style={{ background: 'rgba(247,183,49,0.08)', border: '1px solid rgba(247,183,49,0.2)' }}>
+              <p className="text-xs font-black" style={{ color: '#F7B731' }}>🪙 Cadastre-se e ganhe VotaCoins!</p>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>1 voto = 1 VotaCoin = R$0,01 · Saque a partir de R$20</p>
+            </div>
+          )}
+          {isFirstVote && !phoneSaved && !isAnon && (
             <div className="mb-3 p-3 rounded-xl" style={{ background: 'rgba(37,211,102,0.07)', border: '1px solid #25D36622' }}>
               <p className="text-xs font-black mb-2" style={{ color: '#25D366' }}>🔥 Receba a Polêmica do Dia no WhatsApp</p>
               <div className="flex gap-2">

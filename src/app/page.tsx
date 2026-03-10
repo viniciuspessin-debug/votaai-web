@@ -50,8 +50,11 @@ function HomeCore() {
         // Load votaCoins and save profile if not anonymous
         if (!u.isAnonymous && u.email) {
           getDoc(doc(db, 'members', u.uid)).then(snap => {
-            if (snap.exists()) setVotaCoins(snap.data()?.votaCoins || 0);
-            // Update profile fields
+            if (snap.exists()) {
+              const data = snap.data();
+              setVotaCoins(data?.votaCoins || 0);
+              if (data?.phone) setIsSubscribed(true); // already has WhatsApp
+            }
             setDoc(doc(db, 'members', u.uid), {
               email: u.email,
               displayName: u.displayName || null,
@@ -302,7 +305,7 @@ function HomeCore() {
               ) : (
                 filteredPolls.map((poll, i) => (
                   <div key={poll.id} ref={el => { pollRefs.current[poll.id] = el; }} style={{ animationDelay: `${i * 0.05}s`, transition: 'box-shadow 0.5s', borderRadius: 16, boxShadow: highlightedId === poll.id ? '0 0 0 3px #FF4E8C, 0 0 30px #FF4E8C44' : 'none' }} className="animate-fade-up">
-                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={!isSubscribed && !!votes[poll.id]} onSubscribed={() => setIsSubscribed(true)} />
+                    <PollCard poll={poll} onVote={handleVote} userVote={votes[poll.id]} userId={user?.uid} isFirstVote={!isSubscribed && !!votes[poll.id]} onSubscribed={() => setIsSubscribed(true)} isAnon={isAnon} onShowAuth={() => setShowAuth(true)} />
 
                     {showCity === poll.id && (
                       <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
