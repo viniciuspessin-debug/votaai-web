@@ -12,6 +12,137 @@ import VotaCoin from '@/components/VotaCoin';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 
+const EMAILJS_SERVICE = 'service_66uw6li';
+const EMAILJS_TEMPLATE = 'template_76po9x4';
+const EMAILJS_PUBKEY = 'eT0ZVOr7EfY3mr8Ty';
+
+const TOPICS = [
+  '💡 Sugestão de enquete',
+  '🐛 Reportar problema',
+  '💸 Dúvida sobre VotaCoins',
+  '🤝 Parceria / Imprensa',
+  '🔒 Privacidade / Conta',
+  '💬 Outro assunto',
+];
+
+function ContatoForm({ userEmail, userName }: { userEmail: string; userName: string }) {
+  const [open, setOpen] = useState(false);
+  const [topic, setTopic] = useState('');
+  const [message, setMessage] = useState('');
+  const [step, setStep] = useState<'form' | 'sending' | 'done'>('form');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!topic || message.trim().length < 10) {
+      setError('Selecione um assunto e escreva sua mensagem (mín. 10 caracteres).');
+      return;
+    }
+    setStep('sending');
+    setError('');
+    try {
+      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: EMAILJS_SERVICE,
+          template_id: EMAILJS_TEMPLATE,
+          user_id: EMAILJS_PUBKEY,
+          template_params: {
+            from_name: userName,
+            user_email: userEmail,
+            topic,
+            message,
+          },
+        }),
+      });
+      setStep('done');
+    } catch {
+      setError('Erro ao enviar. Tente novamente.');
+      setStep('form');
+    }
+  };
+
+  const inp: React.CSSProperties = {
+    width: '100%', padding: '11px 14px', borderRadius: 12,
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(255,255,255,0.04)', color: 'white',
+    fontSize: 14, outline: 'none', boxSizing: 'border-box',
+    fontFamily: 'inherit',
+  };
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full py-3 rounded-xl text-sm font-bold border transition-all hover:bg-white/5 mb-2 flex items-center justify-center gap-2"
+        style={{ borderColor: 'rgba(108,99,255,0.3)', color: '#6C63FF' }}
+      >
+        📨 Fale Conosco {open ? '▲' : '▼'}
+      </button>
+
+      {open && (
+        <div className="rounded-2xl p-5 border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(108,99,255,0.2)' }}>
+          {step === 'done' ? (
+            <div className="text-center py-4">
+              <div className="text-4xl mb-3">✅</div>
+              <p className="font-black text-white mb-1">Mensagem enviada!</p>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Responderemos em breve. Obrigado!</p>
+              <button onClick={() => { setStep('form'); setTopic(''); setMessage(''); setOpen(false); }}
+                className="mt-4 px-5 py-2 rounded-xl text-xs font-bold border"
+                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}>
+                Fechar
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p className="text-xs font-bold tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>ASSUNTO</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {TOPICS.map(t => (
+                  <button key={t} onClick={() => { setTopic(t); setError(''); }}
+                    className="text-left transition-all"
+                    style={{
+                      padding: '10px 14px', borderRadius: 10,
+                      border: `1px solid ${topic === t ? 'rgba(108,99,255,0.5)' : 'rgba(255,255,255,0.07)'}`,
+                      background: topic === t ? 'rgba(108,99,255,0.12)' : 'rgba(255,255,255,0.03)',
+                      color: topic === t ? 'white' : 'rgba(255,255,255,0.5)',
+                      fontSize: 13, cursor: 'pointer', fontWeight: topic === t ? 600 : 400,
+                    }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={message}
+                onChange={e => { setMessage(e.target.value); setError(''); }}
+                placeholder="Escreva sua mensagem..."
+                rows={4}
+                style={{ ...inp, resize: 'none', lineHeight: 1.6, marginTop: 4 }}
+              />
+
+              {error && <p className="text-xs" style={{ color: '#FF5252' }}>{error}</p>}
+
+              <button
+                onClick={handleSubmit}
+                disabled={step === 'sending'}
+                className="w-full py-3 rounded-xl text-sm font-bold transition-all"
+                style={{
+                  background: topic && message.trim().length >= 10
+                    ? 'linear-gradient(90deg, #6C63FF, #FF4E8C)'
+                    : 'rgba(255,255,255,0.07)',
+                  color: topic && message.trim().length >= 10 ? 'white' : 'rgba(255,255,255,0.3)',
+                  border: 'none', cursor: 'pointer',
+                }}>
+                {step === 'sending' ? '⏳ Enviando...' : '📨 Enviar mensagem'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function fmt(n: number) {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
   if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
@@ -535,6 +666,9 @@ function HomeCore() {
                   )}
                 </div>
               )}
+
+              {/* Fale Conosco */}
+              {!isAnon && <ContatoForm userEmail={user?.email || ''} userName={user?.displayName || user?.email || 'Membro'} />}
 
               <button
                 onClick={() => { signOut(auth); setTab('feed'); }}
