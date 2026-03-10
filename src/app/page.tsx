@@ -93,23 +93,21 @@ function HomeCore() {
         setUser(user);
       } else {
         setUser(u);
-        // Load votaCoins and save profile if not anonymous
+        // Load votaCoins — never write votaCoins here, only AuthModal does that
         if (!u.isAnonymous && u.email) {
           getDoc(doc(db, 'members', u.uid)).then(snap => {
             if (snap.exists()) {
               const data = snap.data();
               setVotaCoins(data?.votaCoins || 0);
               if (data?.phone) setIsSubscribed(true);
+              // Only update login metadata if doc already exists
+              setDoc(doc(db, 'members', u.uid), {
+                email: u.email,
+                displayName: u.displayName || null,
+                lastLogin: new Date().toISOString(),
+              }, { merge: true }).catch(() => null);
             }
-            // Update profile but never overwrite votaCoins here
-            setDoc(doc(db, 'members', u.uid), {
-              email: u.email,
-              displayName: u.displayName || null,
-              provider: u.providerData[0]?.providerId || 'password',
-              joinedAt: u.metadata.creationTime || null,
-              lastLogin: new Date().toISOString(),
-              uid: u.uid,
-            }, { merge: true }).catch(e => console.error('members write error:', e));
+            // If doc doesn't exist yet, AuthModal will create it with the bonus
           }).catch(() => null);
         }
       }
