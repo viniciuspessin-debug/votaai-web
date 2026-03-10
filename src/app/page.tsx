@@ -96,19 +96,19 @@ function HomeCore() {
         // Load votaCoins — never write votaCoins here, only AuthModal does that
         if (!u.isAnonymous && u.email) {
           getDoc(doc(db, 'members', u.uid)).then(snap => {
+            console.log('[members] exists:', snap.exists(), 'data:', snap.data());
             if (snap.exists()) {
               const data = snap.data();
-              setVotaCoins(data?.votaCoins || 0);
+              console.log('[votaCoins] value from firestore:', data?.votaCoins);
+              setVotaCoins(data?.votaCoins ?? 0);
               if (data?.phone) setIsSubscribed(true);
-              // Only update login metadata if doc already exists
               setDoc(doc(db, 'members', u.uid), {
                 email: u.email,
                 displayName: u.displayName || null,
                 lastLogin: new Date().toISOString(),
               }, { merge: true }).catch(() => null);
             }
-            // If doc doesn't exist yet, AuthModal will create it with the bonus
-          }).catch(() => null);
+          }).catch(e => console.error('[members] getDoc error:', e));
         }
       }
     });
