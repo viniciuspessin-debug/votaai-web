@@ -96,10 +96,8 @@ function HomeCore() {
         // Load votaCoins — never write votaCoins here, only AuthModal does that
         if (!u.isAnonymous && u.email) {
           getDoc(doc(db, 'members', u.uid)).then(snap => {
-            console.log('[members] exists:', snap.exists(), 'data:', snap.data());
             if (snap.exists()) {
               const data = snap.data();
-              console.log('[votaCoins] value from firestore:', data?.votaCoins);
               setVotaCoins(data?.votaCoins ?? 0);
               if (data?.phone) setIsSubscribed(true);
               setDoc(doc(db, 'members', u.uid), {
@@ -117,9 +115,9 @@ function HomeCore() {
 
   // Geolocation
   useEffect(() => {
-    fetch('https://ipapi.co/json/')
+    fetch('https://freeipapi.com/api/json')
       .then(r => r.json())
-      .then(d => setCity(d.city || null))
+      .then(d => setCity(d.cityName || null))
       .catch(() => null);
   }, []);
 
