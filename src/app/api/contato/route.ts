@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer re_5bKNXwEf_8UnR1rfBxuaJiLpix74fKBRM',
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'VotaAí <onboarding@resend.dev>',
+        from: 'VotaAí <noreply@votaai.app>',
         to: ['pessin@votaai.app'],
         subject: `[VotaAí] ${topic} - ${from_name}`,
         html: `
