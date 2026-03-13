@@ -89,8 +89,10 @@ export async function createPoll({ question, optionA, optionB, tag, color, userI
     cities: {},
     slug: generateSlug(question),
     order: lastOrder,
-    createdBy: userId,
+    createdBy: userId || 'user',
     createdAt: serverTimestamp(),
+    pinned: false,
+    hotOfDay: false,
   });
 }
 
