@@ -97,22 +97,23 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (user?.email === ADMIN_EMAIL) {
-      fetchPolls();
+      const unsubPolls = fetchPolls();
       fetchCategories();
       fetchSubscribers();
       fetchMembers();
       // Real-time saques listener
       const q = query(collection(db, 'saques'), orderBy('requestedAt', 'desc'));
-      const unsub = onSnapshot(q, snap => setSaques(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      return unsub;
+      const unsubSaques = onSnapshot(q, snap => setSaques(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      return () => { unsubPolls(); unsubSaques(); };
     }
   }, [user]);
 
-  const fetchPolls = async () => {
+  const fetchPolls = () => {
     const q = query(collection(db, 'polls'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    const data = snap.docs.map((d, i) => ({ id: d.id, ...d.data(), _order: (d.data() as any).order ?? i }));
-    setPolls(data.sort((a, b) => a._order - b._order));
+    return onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d, i) => ({ id: d.id, ...d.data(), _order: (d.data() as any).order ?? i }));
+      setPolls(data.sort((a: any, b: any) => a._order - b._order));
+    });
   };
 
   const fetchCategories = async () => {
