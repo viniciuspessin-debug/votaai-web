@@ -116,6 +116,28 @@ export default function AdminPage() {
     });
   };
 
+  const handleDeleteMember = async (id: string) => {
+    if (!confirm('Deletar este membro? Esta ação não pode ser desfeita.')) return;
+    try {
+      await deleteDoc(doc(db, 'members', id));
+      setMembers((prev: any[]) => prev.filter((m: any) => m.id !== id));
+      showToast('🗑️ Membro removido');
+    } catch (e) {
+      showToast('❌ Erro ao remover membro');
+    }
+  };
+
+  const handleDeleteSubscriber = async (id: string) => {
+    if (!confirm('Remover este inscrito do WhatsApp?')) return;
+    try {
+      await deleteDoc(doc(db, 'subscribers', id));
+      setSubscribers((prev: any[]) => prev.filter((s: any) => s.id !== id));
+      showToast('🗑️ Inscrito removido');
+    } catch (e) {
+      showToast('❌ Erro ao remover inscrito');
+    }
+  };
+
   const fetchCategories = async () => {
     try {
       const snap = await getDoc(doc(db, 'config', 'categories'));
@@ -380,9 +402,17 @@ export default function AdminPage() {
                         {m.provider === 'google.com' ? '🔵 Google' : '📧 Email'} · {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('pt-BR') : '-'}
                       </p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-black" style={{ color: '#6C63FF' }}>{m.voteCount}</p>
-                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>votos</p>
+                    <div className="text-right shrink-0 flex items-center gap-3">
+                      <div>
+                        <p className="text-sm font-black" style={{ color: '#6C63FF' }}>{m.voteCount}</p>
+                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>votos</p>
+                      </div>
+                      <button onClick={() => handleDeleteMember(m.id)}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110"
+                        style={{ background: 'rgba(255,82,82,0.1)', color: '#FF5252', border: '1px solid rgba(255,82,82,0.2)', cursor: 'pointer' }}
+                        title="Deletar membro">
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -414,13 +444,21 @@ export default function AdminPage() {
                     {subscribers.map((s: any) => {
                       const msg = encodeURIComponent(`🔥 POLÊMICA DO DIA no VotaAí!\n${hotPoll.question}\nhttps://votaai.app\nResponda SAIR para cancelar`);
                       return (
-                        <a key={s.id} href={`https://wa.me/55${s.phone}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-xl border transition-all" style={{ background: 'rgba(37,211,102,0.05)', borderColor: '#25D36633' }}>
-                          <div>
-                            <p className="text-sm font-bold text-white">{s.name || 'Anônimo'}</p>
-                            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>+55 {s.phone}</p>
-                          </div>
-                          <span className="text-lg">💬</span>
-                        </a>
+                        <div key={s.id} className="flex items-center gap-2 p-3 rounded-xl border" style={{ background: 'rgba(37,211,102,0.05)', borderColor: '#25D36633' }}>
+                          <a href={`https://wa.me/55${s.phone}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between flex-1 transition-all">
+                            <div>
+                              <p className="text-sm font-bold text-white">{s.name || 'Anônimo'}</p>
+                              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>+55 {s.phone}</p>
+                            </div>
+                            <span className="text-lg">💬</span>
+                          </a>
+                          <button onClick={() => handleDeleteSubscriber(s.id)}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all hover:scale-110"
+                            style={{ background: 'rgba(255,82,82,0.1)', color: '#FF5252', border: '1px solid rgba(255,82,82,0.2)', cursor: 'pointer' }}
+                            title="Remover inscrito">
+                            🗑️
+                          </button>
+                        </div>
                       );
                     })}
                     {subscribers.length === 0 && <p className="text-center text-sm py-4" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum inscrito ainda</p>}
