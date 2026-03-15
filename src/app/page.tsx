@@ -388,10 +388,13 @@ function HomeCore() {
     }
   }, [user, votes, streak, city]);
 
+  const [newPoll, setNewPoll] = useState<any>(null);
+  const [profileTab, setProfileTab] = useState<'stats' | 'enquetes' | 'historico'>('stats');
+
   const handleCreate = async (data: any) => {
     if (!user) return;
-    await createPoll({ ...data, userId: user.uid });
-    showNotif('🎉 Enquete publicada!');
+    const ref = await createPoll({ ...data, userId: user.uid });
+    setNewPoll({ ...data, id: ref.id });
   };
 
 
@@ -622,9 +625,22 @@ function HomeCore() {
           {/* PERFIL */}
           {tab === 'perfil' && (
             <div>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <button onClick={() => setTab('feed')} className="text-2xl font-black text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.05em', background: 'none', border: 'none', cursor: 'pointer' }}>← VOTAAI</button>
               </div>
+              {/* Sub-tabs */}
+              {!isAnon && (
+                <div className="flex gap-2 mb-5">
+                  {([['stats','📊 Perfil'],['enquetes','📋 Minhas Enquetes'],['historico','🗳️ Histórico']] as const).map(([id, label]) => (
+                    <button key={id} onClick={() => setProfileTab(id)}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                      style={{ background: profileTab === id ? '#6C63FF' : 'rgba(255,255,255,0.05)', color: profileTab === id ? 'white' : 'rgba(255,255,255,0.4)', border: 'none', cursor: 'pointer' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Avatar sempre visível */}
               <div className="rounded-2xl p-6 mb-4 text-center border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: '#6C63FF33' }}>
                 <div className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl border-2" style={{ background: '#6C63FF22', borderColor: '#6C63FF' }}>
                   {isAnon ? '🗳️' : '😎'}
@@ -638,68 +654,137 @@ function HomeCore() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {[
-                  { label: 'Votos dados', value: votedCount, emoji: '🗳️', color: '#6C63FF' },
-                  { label: 'Streak atual', value: `${streak}🔥`, emoji: '⚡', color: '#FF6B35' },
-                  { label: 'Enquetes', value: polls.length, emoji: '📋', color: '#00C9A7' },
-                  { label: 'Cidade', value: city || '?', emoji: '📍', color: '#FF4E8C' },
-                ].map(stat => (
-                  <div key={stat.label} className="p-4 rounded-2xl text-center border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: stat.color + '33' }}>
-                    <div className="text-2xl mb-2">{stat.emoji}</div>
-                    <div className="text-xl font-black" style={{ color: stat.color, fontFamily: 'var(--font-display)' }}>{stat.value}</div>
-                    <div className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* VotaCoins card */}
-              {!isAnon && (
-                <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.2)' }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <VotaCoin size={22} />
-                        <p className="text-xs font-bold tracking-widest" style={{ color: '#4ADE80' }}>VOTACOINS</p>
+              {/* Aba Stats */}
+              {(isAnon || profileTab === 'stats') && (
+                <>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {[
+                      { label: 'Votos dados', value: votedCount, emoji: '🗳️', color: '#6C63FF' },
+                      { label: 'Streak atual', value: `${streak}🔥`, emoji: '⚡', color: '#FF6B35' },
+                      { label: 'Enquetes criadas', value: polls.filter(p => p.createdBy === user?.uid).length, emoji: '📋', color: '#00C9A7' },
+                      { label: 'Cidade', value: city || '?', emoji: '📍', color: '#FF4E8C' },
+                    ].map(stat => (
+                      <div key={stat.label} className="p-4 rounded-2xl text-center border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: stat.color + '33' }}>
+                        <div className="text-2xl mb-2">{stat.emoji}</div>
+                        <div className="text-xl font-black" style={{ color: stat.color, fontFamily: 'var(--font-display)' }}>{stat.value}</div>
+                        <div className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{stat.label}</div>
                       </div>
-                      <p className="text-3xl font-black text-white mt-1" style={{ fontFamily: 'var(--font-display)' }}>{votaCoins} <span className="text-base" style={{ color: 'rgba(255,255,255,0.4)' }}>= R${(votaCoins * 0.01).toFixed(2)}</span></p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Saque mín.</p>
-                      <p className="text-sm font-black" style={{ color: '#F7B731' }}>R$20,00</p>
-                    </div>
+                    ))}
                   </div>
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      <span>{votaCoins} coins</span>
-                      <span>2.000 coins</span>
+
+                  {/* VotaCoins card */}
+                  {!isAnon && (
+                    <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.2)' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <VotaCoin size={22} />
+                            <p className="text-xs font-bold tracking-widest" style={{ color: '#4ADE80' }}>VOTACOINS</p>
+                          </div>
+                          <p className="text-3xl font-black text-white mt-1" style={{ fontFamily: 'var(--font-display)' }}>{votaCoins} <span className="text-base" style={{ color: 'rgba(255,255,255,0.4)' }}>= R${(votaCoins * 0.01).toFixed(2)}</span></p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Saque mín.</p>
+                          <p className="text-sm font-black" style={{ color: '#F7B731' }}>R$20,00</p>
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <div className="flex justify-between text-xs mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          <span>{votaCoins} coins</span>
+                          <span>2.000 coins</span>
+                        </div>
+                        <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min((votaCoins / 2000) * 100, 100)}%`, background: 'linear-gradient(90deg, #F7B731, #FF6B35)' }} />
+                        </div>
+                      </div>
+                      {votaCoins >= 2000 ? (
+                        <SaqueForm coins={votaCoins} email={user?.email || ''} uid={user?.uid || ''} onSaque={() => {}} />
+                      ) : (
+                        <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          Faltam {Math.max(0, 2000 - votaCoins)} coins para sacar · Vote mais enquetes!
+                        </p>
+                      )}
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.min((votaCoins / 2000) * 100, 100)}%`, background: 'linear-gradient(90deg, #F7B731, #FF6B35)' }} />
-                    </div>
-                  </div>
-                  {votaCoins >= 2000 ? (
-                    <SaqueForm coins={votaCoins} email={user?.email || ''} uid={user?.uid || ''} onSaque={() => {}} />
-                  ) : (
-                    <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      Faltam {Math.max(0, 2000 - votaCoins)} coins para sacar · Vote mais enquetes!
-                    </p>
                   )}
-                </div>
+
+                  {/* Fale Conosco */}
+                  {!isAnon && <ContatoForm userEmail={user?.email || ''} userName={user?.displayName || user?.email || 'Membro'} />}
+
+                  <button
+                    onClick={() => { signOut(auth); setTab('feed'); }}
+                    className="w-full py-3 rounded-xl text-sm font-bold border mb-6 transition-all hover:bg-white/5"
+                    style={{ borderColor: 'rgba(255,82,82,0.3)', color: '#FF5252' }}
+                  >
+                    🚪 Sair da conta
+                  </button>
+                </>
               )}
 
-              {/* Fale Conosco */}
-              {!isAnon && <ContatoForm userEmail={user?.email || ''} userName={user?.displayName || user?.email || 'Membro'} />}
+              {/* Aba Minhas Enquetes */}
+              {!isAnon && profileTab === 'enquetes' && (() => {
+                const myPolls = polls.filter(p => p.createdBy === user?.uid);
+                return (
+                  <div>
+                    {myPolls.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="text-4xl mb-3">📋</div>
+                        <p className="font-bold text-white mb-1">Nenhuma enquete criada</p>
+                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Crie sua primeira enquete e compartilhe com amigos!</p>
+                        <button onClick={() => setShowCreate(true)}
+                          className="mt-4 px-5 py-2 rounded-xl text-sm font-bold"
+                          style={{ background: 'linear-gradient(90deg,#6C63FF,#FF4E8C)', color: 'white', border: 'none', cursor: 'pointer' }}>
+                          ➕ Criar enquete
+                        </button>
+                      </div>
+                    ) : (
+                      myPolls.map(p => {
+                        const total = (p.votesA || 0) + (p.votesB || 0);
+                        const pctA = total > 0 ? Math.round((p.votesA / total) * 100) : 50;
+                        const shareUrl = `https://votaai.app/p/${p.slug || p.id}`;
+                        return (
+                          <div key={p.id} className="rounded-2xl p-4 mb-3 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}>
+                            <p className="text-sm font-bold text-white mb-3">{p.question}</p>
+                            <div className="flex gap-2 text-xs mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                              <span>🗳️ {total.toLocaleString('pt-BR')} votos</span>
+                              <span>·</span>
+                              <span style={{ color: p.color || '#6C63FF' }}>{p.optionA?.label} {pctA}%</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  if (navigator.share) {
+                                    navigator.share({ title: 'VotaAí', text: p.question, url: shareUrl });
+                                  } else {
+                                    navigator.clipboard.writeText(shareUrl);
+                                    showNotif('🔗 Link copiado!');
+                                  }
+                                }}
+                                className="flex-1 py-2 rounded-xl text-xs font-bold"
+                                style={{ background: 'rgba(108,99,255,0.15)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.3)', cursor: 'pointer' }}>
+                                📤 Compartilhar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const txt = encodeURIComponent(`${p.question}
 
-              <button
-                onClick={() => { signOut(auth); setTab('feed'); }}
-                className="w-full py-3 rounded-xl text-sm font-bold border mb-6 transition-all hover:bg-white/5"
-                style={{ borderColor: 'rgba(255,82,82,0.3)', color: '#FF5252' }}
-              >
-                🚪 Sair da conta
-              </button>
+Vote e ganhe VotaCoins! 👉 ${shareUrl}`);
+                                  window.open(`https://wa.me/?text=${txt}`, '_blank');
+                                }}
+                                className="flex-1 py-2 rounded-xl text-xs font-bold"
+                                style={{ background: 'rgba(37,211,102,0.12)', color: '#25D366', border: '1px solid rgba(37,211,102,0.25)', cursor: 'pointer' }}>
+                                💬 WhatsApp
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                );
+              })()}
 
-              {votedCount > 0 && (
+              {/* Aba Histórico */}
+              {!isAnon && profileTab === 'historico' && votedCount > 0 && (
                 <>
                   <p className="text-xs font-bold tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>HISTÓRICO DE VOTOS</p>
                   {Object.entries(votes).map(([id, choice]) => {
@@ -743,6 +828,60 @@ function HomeCore() {
         <AuthModal onClose={() => setShowAuth(false)} anonUid={isAnon ? user?.uid : undefined} />
       )}
       {showCreate && <CreatePollModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
+
+      {/* Pop-up pós-criação */}
+      {newPoll && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setNewPoll(null)} />
+          <div className="relative w-full max-w-sm rounded-3xl p-6 border" style={{ background: '#13131A', borderColor: 'rgba(108,99,255,0.3)' }}>
+            <div className="text-center mb-5">
+              <div className="text-5xl mb-3">🎉</div>
+              <h3 className="text-xl font-black text-white mb-1">Enquete publicada!</h3>
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Compartilhe com seus amigos para começar a votar!</p>
+            </div>
+            <div className="rounded-2xl p-4 mb-5 border" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.06)' }}>
+              <p className="text-sm font-bold text-white truncate">{newPoll.question}</p>
+              <p className="text-xs mt-1 font-mono" style={{ color: 'rgba(255,255,255,0.3)' }}>votaai.app/p/{newPoll.id}</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  const url = `https://votaai.app/p/${newPoll.id}`;
+                  const txt = `${newPoll.question}
+
+Vote e ganhe VotaCoins! 👉 ${url}`;
+                  if (navigator.share) {
+                    navigator.share({ title: 'VotaAí', text: txt, url });
+                  } else {
+                    navigator.clipboard.writeText(url);
+                    showNotif('🔗 Link copiado!');
+                  }
+                }}
+                className="w-full py-3 rounded-2xl font-black text-white text-sm"
+                style={{ background: 'linear-gradient(90deg, #6C63FF, #FF4E8C)' }}>
+                📤 Compartilhar enquete
+              </button>
+              <button
+                onClick={() => {
+                  const url = `https://votaai.app/p/${newPoll.id}`;
+                  const txt = encodeURIComponent(`${newPoll.question}
+
+Vote e ganhe VotaCoins! 👉 ${url}`);
+                  window.open(`https://wa.me/?text=${txt}`, '_blank');
+                }}
+                className="w-full py-3 rounded-2xl font-black text-sm"
+                style={{ background: 'rgba(37,211,102,0.15)', color: '#25D366', border: '1px solid rgba(37,211,102,0.3)' }}>
+                💬 Compartilhar no WhatsApp
+              </button>
+              <button onClick={() => setNewPoll(null)}
+                className="w-full py-3 rounded-2xl text-sm font-bold"
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
