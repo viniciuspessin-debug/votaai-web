@@ -753,7 +753,7 @@ function HomeCore() {
                               <button
                                 onClick={() => {
                                   if (navigator.share) {
-                                    navigator.share({ title: 'VotaAí', text: p.question, url: shareUrl });
+                                    navigator.share({ title: 'VotaAí', text: `${p.question}\n\nVote e ganhe VotaCoins! 👉 ${shareUrl}\n\nEnvie para seus amigos!`, url: shareUrl });
                                   } else {
                                     navigator.clipboard.writeText(shareUrl);
                                     showNotif('🔗 Link copiado!');
@@ -767,7 +767,9 @@ function HomeCore() {
                                 onClick={() => {
                                   const txt = encodeURIComponent(`${p.question}
 
-Vote e ganhe VotaCoins! 👉 ${shareUrl}`);
+Vote e ganhe VotaCoins! 👉 ${shareUrl}
+
+Envie para seus amigos!`);
                                   window.open(`https://wa.me/?text=${txt}`, '_blank');
                                 }}
                                 className="flex-1 py-2 rounded-xl text-xs font-bold"
@@ -849,7 +851,9 @@ Vote e ganhe VotaCoins! 👉 ${shareUrl}`);
                   const url = `https://votaai.app/p/${newPoll.id}`;
                   const txt = `${newPoll.question}
 
-Vote e ganhe VotaCoins! 👉 ${url}`;
+Vote e ganhe VotaCoins! 👉 ${url}
+
+Envie para seus amigos!`;
                   if (navigator.share) {
                     navigator.share({ title: 'VotaAí', text: txt, url });
                   } else {
@@ -866,7 +870,9 @@ Vote e ganhe VotaCoins! 👉 ${url}`;
                   const url = `https://votaai.app/p/${newPoll.id}`;
                   const txt = encodeURIComponent(`${newPoll.question}
 
-Vote e ganhe VotaCoins! 👉 ${url}`);
+Vote e ganhe VotaCoins! 👉 ${url}
+
+Envie para seus amigos!`);
                   window.open(`https://wa.me/?text=${txt}`, '_blank');
                 }}
                 className="w-full py-3 rounded-2xl font-black text-sm"
