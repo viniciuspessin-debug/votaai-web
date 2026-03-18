@@ -187,11 +187,13 @@ export default function AdminPage() {
     const newPolls = [...polls];
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
     if (swapIndex < 0 || swapIndex >= newPolls.length) return;
+    const idA = newPolls[index].id;
+    const idB = newPolls[swapIndex].id;
     [newPolls[index], newPolls[swapIndex]] = [newPolls[swapIndex], newPolls[index]];
     setPolls(newPolls);
     await Promise.all([
-      updateDoc(doc(db, 'polls', newPolls[index].id), { order: index }),
-      updateDoc(doc(db, 'polls', newPolls[swapIndex].id), { order: swapIndex }),
+      updateDoc(doc(db, 'polls', idA), { order: swapIndex }),
+      updateDoc(doc(db, 'polls', idB), { order: index }),
     ]);
     showToast('↕️ Ordem atualizada!');
   };
