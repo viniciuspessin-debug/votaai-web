@@ -108,11 +108,14 @@ export default function AdminPage() {
     }
   }, [user]);
 
+  const movingRef = { current: false };
+
   const fetchPolls = () => {
     const q = query(collection(db, 'polls'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snap) => {
+      if (movingRef.current) return;
       const data = snap.docs.map((d, i) => ({ id: d.id, ...d.data(), _order: (d.data() as any).order ?? i }));
-      setPolls(data.sort((a: any, b: any) => a._order - b._order));
+      setPolls(data.sort((a: any, b: any) => (a._order ?? 999) - (b._order ?? 999)));
     });
   };
 
@@ -183,17 +186,34 @@ export default function AdminPage() {
     showToast(!current ? '🔥 Polêmica do Dia definida!' : '🔥 Selo removido');
   };
 
-  const handleMove = async (index: number, direction: 'up' | 'down') => {
-    const newPolls = [...polls];
+  const handleMove = async (pollId: string, direction: 'up' | 'down') => {
+    // Work with current sorted polls array
+    const sorted = [...polls].sort((a: any, b: any) => (a._order ?? 999) - (b._order ?? 999));
+    const index = sorted.findIndex((p: any) => p.id === pollId);
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= newPolls.length) return;
-    const idA = newPolls[index].id;
-    const idB = newPolls[swapIndex].id;
-    [newPolls[index], newPolls[swapIndex]] = [newPolls[swapIndex], newPolls[index]];
-    setPolls(newPolls);
+    if (swapIndex < 0 || swapIndex >= sorted.length) return;
+
+    const pollA = sorted[index];
+    const pollB = sorted[swapIndex];
+    const orderA = pollA._order ?? index;
+    const orderB = pollB._order ?? swapIndex;
+
+    // Block snapshot from overwriting during move
+    movingRef.current = true;
+    setTimeout(() => { movingRef.current = false; }, 2000);
+
+    // Update local state immediately
+    const updated = polls.map((p: any) => {
+      if (p.id === pollA.id) return { ...p, _order: orderB };
+      if (p.id === pollB.id) return { ...p, _order: orderA };
+      return p;
+    });
+    setPolls(updated.sort((a: any, b: any) => (a._order ?? 999) - (b._order ?? 999)));
+
+    // Persist to Firestore
     await Promise.all([
-      updateDoc(doc(db, 'polls', idA), { order: swapIndex }),
-      updateDoc(doc(db, 'polls', idB), { order: index }),
+      updateDoc(doc(db, 'polls', pollA.id), { order: orderB }),
+      updateDoc(doc(db, 'polls', pollB.id), { order: orderA }),
     ]);
     showToast('↕️ Ordem atualizada!');
   };
@@ -330,9 +350,9 @@ export default function AdminPage() {
                       <div className="flex items-start gap-4">
                         {sortBy === 'order' && (
                           <div className="flex flex-col gap-1 shrink-0 mt-1">
-                            <button onClick={() => handleMove(realIndex, 'up')} disabled={realIndex === 0} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background: 'rgba(255,255,255,0.06)', color: realIndex === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)' }}>▲</button>
+                            <button onClick={() => handleMove(poll.id, 'up')} disabled={realIndex === 0} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background: 'rgba(255,255,255,0.06)', color: realIndex === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)' }}>▲</button>
                             <div className="text-center text-xs font-bold" style={{ color: 'rgba(255,255,255,0.2)' }}>{realIndex + 1}</div>
-                            <button onClick={() => handleMove(realIndex, 'down')} disabled={realIndex === polls.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background: 'rgba(255,255,255,0.06)', color: realIndex === polls.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)' }}>▼</button>
+                            <button onClick={() => handleMove(poll.id, 'down')} disabled={realIndex === polls.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background: 'rgba(255,255,255,0.06)', color: realIndex === polls.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)' }}>▼</button>
                           </div>
                         )}
                         <div className="w-3 h-3 rounded-full mt-1.5 shrink-0" style={{ background: poll.color || '#6C63FF' }} />
