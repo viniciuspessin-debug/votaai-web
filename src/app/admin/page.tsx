@@ -97,26 +97,38 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (user?.email === ADMIN_EMAIL) {
-      const unsubPolls = fetchPolls();
+      fetchPolls();
       fetchCategories();
       fetchSubscribers();
       fetchMembers();
       // Real-time saques listener
       const q = query(collection(db, 'saques'), orderBy('requestedAt', 'desc'));
       const unsubSaques = onSnapshot(q, snap => setSaques(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-      return () => { unsubPolls(); unsubSaques(); };
+      return () => { unsubSaques(); };
     }
   }, [user]);
 
-  const movingRef = { current: false };
-
-  const fetchPolls = () => {
-    const q = query(collection(db, 'polls'), orderBy('createdAt', 'desc'));
-    return onSnapshot(q, (snap) => {
-      if (movingRef.current) return;
-      const data = snap.docs.map((d, i) => ({ id: d.id, ...d.data(), _order: (d.data() as any).order ?? i }));
-      setPolls(data.sort((a: any, b: any) => (a._order ?? 999) - (b._order ?? 999)));
-    });
+  const fetchPolls = async () => {
+    const snap = await getDocs(collection(db, 'polls'));
+    let data = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    // Sort: if all have order field use it, otherwise fallback to createdAt
+    const hasOrder = data.every(p => typeof p.order === 'number');
+    if (hasOrder) {
+      data = data.sort((a: any, b: any) => a.order - b.order);
+    } else {
+      data = data.sort((a: any, b: any) => {
+        const tA = a.createdAt?.seconds ?? 0;
+        const tB = b.createdAt?.seconds ?? 0;
+        return tA - tB;
+      });
+      // Normalize order for all polls
+      const batch = data.map((p: any, i: number) =>
+        updateDoc(doc(db, 'polls', p.id), { order: i })
+      );
+      await Promise.all(batch);
+      data = data.map((p: any, i: number) => ({ ...p, order: i }));
+    }
+    setPolls(data);
   };
 
   const handleDeleteMember = async (id: string) => {
@@ -187,34 +199,22 @@ export default function AdminPage() {
   };
 
   const handleMove = async (pollId: string, direction: 'up' | 'down') => {
-    // Work with current sorted polls array
-    const sorted = [...polls].sort((a: any, b: any) => (a._order ?? 999) - (b._order ?? 999));
-    const index = sorted.findIndex((p: any) => p.id === pollId);
+    const index = polls.findIndex((p: any) => p.id === pollId);
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= sorted.length) return;
+    if (swapIndex < 0 || swapIndex >= polls.length) return;
 
-    const pollA = sorted[index];
-    const pollB = sorted[swapIndex];
-    const orderA = pollA._order ?? index;
-    const orderB = pollB._order ?? swapIndex;
+    // Swap in local array
+    const newPolls = [...polls];
+    [newPolls[index], newPolls[swapIndex]] = [newPolls[swapIndex], newPolls[index]];
 
-    // Block snapshot from overwriting during move
-    movingRef.current = true;
-    setTimeout(() => { movingRef.current = false; }, 2000);
+    // Re-assign order 0,1,2... sequentially
+    const normalized = newPolls.map((p: any, i: number) => ({ ...p, order: i }));
+    setPolls(normalized);
 
-    // Update local state immediately
-    const updated = polls.map((p: any) => {
-      if (p.id === pollA.id) return { ...p, _order: orderB };
-      if (p.id === pollB.id) return { ...p, _order: orderA };
-      return p;
-    });
-    setPolls(updated.sort((a: any, b: any) => (a._order ?? 999) - (b._order ?? 999)));
-
-    // Persist to Firestore
-    await Promise.all([
-      updateDoc(doc(db, 'polls', pollA.id), { order: orderB }),
-      updateDoc(doc(db, 'polls', pollB.id), { order: orderA }),
-    ]);
+    // Persist all orders to Firestore
+    await Promise.all(
+      normalized.map((p: any) => updateDoc(doc(db, 'polls', p.id), { order: p.order }))
+    );
     showToast('↕️ Ordem atualizada!');
   };
 
@@ -261,7 +261,7 @@ export default function AdminPage() {
     .filter(p => p.question?.toLowerCase().includes(search.toLowerCase()) ||
       p.optionA?.label?.toLowerCase().includes(search.toLowerCase()) ||
       p.optionB?.label?.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => sortBy === 'popular' ? (b.totalVotes || 0) - (a.totalVotes || 0) : (a._order - b._order));
+    .sort((a: any, b: any) => sortBy === 'popular' ? (b.totalVotes || 0) - (a.totalVotes || 0) : (a.order ?? 0) - (b.order ?? 0));
   const totalVotes = polls.reduce((acc, p) => acc + (p.totalVotes || 0), 0);
   const hotPoll = polls.find(p => p.hotOfDay);
 
@@ -344,7 +344,7 @@ export default function AdminPage() {
                 {filtered.map((poll) => {
                   const total = poll.totalVotes || 0;
                   const pctA = total > 0 ? Math.round(((poll.votesA || 0) / total) * 100) : 50;
-                  const realIndex = polls.findIndex(p => p.id === poll.id);
+                  const realIndex = polls.findIndex((p: any) => p.id === poll.id);
                   return (
                     <div key={poll.id} className="rounded-2xl p-5 border transition-all" style={{ background: poll.pinned ? 'rgba(247,183,49,0.05)' : 'rgba(255,255,255,0.03)', borderColor: poll.hotOfDay ? '#FF4E8C33' : poll.pinned ? '#F7B73133' : 'rgba(255,255,255,0.07)' }}>
                       <div className="flex items-start gap-4">
