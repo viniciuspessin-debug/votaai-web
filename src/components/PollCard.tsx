@@ -221,7 +221,7 @@ export default function PollCard({ poll, onVote, userVote, userId, isFirstVote, 
             <button
               onClick={() => {
                 const url = poll.slug ? `https://votaai.app/p/${poll.slug}` : 'https://votaai.app';
-                const text = `🔥 ${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} ${pctA}% vs ${poll.optionB.emoji} ${poll.optionB.label} ${pctB}%\n\nResponda e ganhe VotaCoins! 👉 ${url}`;
+                const text = `🔥 ${poll.question}\n${poll.optionA.emoji} ${poll.optionA.label} ${pctA}% vs ${poll.optionB.emoji} ${poll.optionB.label} ${pctB}%\n\nResponda e ganhe VotaCoins! 👉 ${url}\n\nEnvie para seus amigos!`;
                 if (navigator.share) navigator.share({ text });
                 else navigator.clipboard.writeText(text);
               }}
