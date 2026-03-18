@@ -218,6 +218,24 @@ export default function AdminPage() {
     showToast('↕️ Ordem atualizada!');
   };
 
+  const handleMoveTo = async (pollId: string, newPos: number) => {
+    const index = polls.findIndex((p: any) => p.id === pollId);
+    const targetPos = Math.max(0, Math.min(polls.length - 1, newPos - 1)); // convert 1-based to 0-based
+    if (index === targetPos) return;
+
+    const newPolls = [...polls];
+    const [moved] = newPolls.splice(index, 1); // remove from current position
+    newPolls.splice(targetPos, 0, moved);       // insert at target position
+
+    const normalized = newPolls.map((p: any, i: number) => ({ ...p, order: i }));
+    setPolls(normalized);
+
+    await Promise.all(
+      normalized.map((p: any) => updateDoc(doc(db, 'polls', p.id), { order: p.order }))
+    );
+    showToast(`↕️ Movido para posição ${targetPos + 1}`);
+  };
+
   const handleAddCategory = async () => {
     const cat = newCat.trim().toLowerCase();
     if (!cat || categories.includes(cat)) return;
@@ -351,7 +369,26 @@ export default function AdminPage() {
                         {sortBy === 'order' && (
                           <div className="flex flex-col gap-1 shrink-0 mt-1">
                             <button onClick={() => handleMove(poll.id, 'up')} disabled={realIndex === 0} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background: 'rgba(255,255,255,0.06)', color: realIndex === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)' }}>▲</button>
-                            <div className="text-center text-xs font-bold" style={{ color: 'rgba(255,255,255,0.2)' }}>{realIndex + 1}</div>
+                            <input
+                              type="number"
+                              min={1}
+                              max={polls.length}
+                              defaultValue={realIndex + 1}
+                              key={realIndex}
+                              className="text-center text-xs font-bold outline-none rounded-lg"
+                              style={{ width: 32, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 0' }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  const val = parseInt((e.target as HTMLInputElement).value);
+                                  if (!isNaN(val)) handleMoveTo(poll.id, val);
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                              onBlur={e => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val) && val !== realIndex + 1) handleMoveTo(poll.id, val);
+                              }}
+                            />
                             <button onClick={() => handleMove(poll.id, 'down')} disabled={realIndex === polls.length - 1} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background: 'rgba(255,255,255,0.06)', color: realIndex === polls.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)' }}>▼</button>
                           </div>
                         )}
